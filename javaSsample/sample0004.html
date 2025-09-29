@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/dhtmlxAppLayout7 :: layout(~{::script})}"  xmlns:th="http://www.thymeleaf.org">
+
+<script th:src="@{/js/auigrid/includeAUIGrid.js}"></script>
+
+<style type="text/css">
+/* 커스텀 스타일 */
+.redCell {
+	font-weight:bold;
+	color:#ffa2a2;
+}
+</style>
+
+
+<script>
+
+// main layout
+var layoutMain;
+
+// 그리드 ID
+var grdMain;
+
+
+$(function() {
+
+	//
+	// 1. 기본 layout 구성
+	const layoutConfig = {
+	    type: "line",
+	    
+	    // 첫번째 줄
+	    rows: [
+	    	{ id: "grid", height: "100%", header: "소계, 합계, 병합, 동적컬럼 Sample", headerHeight: "35px", html: '<div id="grdMain" style="height: 100%;"></div>' },
+	    ]
+	};
+	
+	// layout 생성
+    layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+    
+	
+	//
+    /* Grid-목록 */
+	let mainProps = {
+	      selectionMode: "multipleRow" 	// 선택모드
+	    , enableMovingColumn: true 		// 헤더를 드래그앤드랍으로 자리 옮기기
+	    , showRowNumColumn: false 		// 로우넘 숨기기
+	    , wordWrap : true				// TemplateRenderer Cell 높이 조정
+	    , fixedColumnCount: 4 			// 고정 칼럼 4개 적용시킴 (사업장코드 ~ 식당명)
+	    , showFooter: true 				// footer 사용 여부
+	    , footerRowCount: 3 			// 푸터 행 개수 설정
+	 	
+	 	// Grid 그룹핑
+	 	, useGroupingPanel: false // 그룹핑 패널 사용 여부
+	 	, groupingFields: ["SIT_CD", "CLS_CD"] // SIT_CD, CLS_CD 를 기준으로 그룹핑을 합니다.
+	  	//, groupingFields: ["SIT_CD"] // SIT_CD 를 기준으로 그룹핑을 합니다.
+	 	, groupingSummary: {
+	 						// 소계 필드는 "*_CUS", "*_CNT", "*_TOT" 에 대하여 실시 합니다.
+	 						dataFields : [
+	 										  "SUN_CUS", "SUN_CNT", "SUN_TOT"
+	 										, "MON_CUS", "MON_CNT", "MON_TOT"
+	 										, "TUE_CUS", "TUE_CNT", "TUE_TOT"
+	 										, "WED_CUS", "WED_CNT", "WED_TOT"
+	 										, "THU_CUS", "THU_CNT", "THU_TOT"
+	 										, "FRI_CUS", "FRI_CNT", "FRI_TOT"
+	 										, "SAT_CUS", "SAT_CNT", "SAT_TOT"
+	 						],
+	 						labelTexts : [ "소계" ]
+		  } 
+		, displayTreeOpen: true 			// 최초 보여질 때 모두 열린 상태로 출력 여부
+		, enableCellMerge: true 			// 그룹핑 후 셀 병합 실행
+		, cellMergeRowSpan: true 			// enableCellMerge 할 때 실제로 rowspan 적용 시킬지 여부, 만약 false 설정하면 실제 병합은 하지 않고(rowspan 적용 시키지 않고) 최상단에 값만 출력 시킵니다.
+		, keepColumnOrderOnGrouping: true 	// 그룹핑 시 그룹핑 필드들이 첫 열로 옮겨지는 것을 막고 원래 칼럼 레이아웃 순서를 유지할지 여부를 지정합니다.(기본값 : false)
+	  	//, fillValueGroupingSummary: true 	// 그룹핑 썸머리행의 앞부분에 값을 채울지 여부, true 설정하면 그룹핑된 행도 세로 병합이 됨.
+	  	//, adjustSummaryPosition: true 	// fillValueGroupingSummary=true 설정 일 때에만 유효, 썸머리 행의 위치를 일괄 적으로 groupingFields 의 마지막 필드에 위치시킬지 여부
+	 	, showBranchOnGrouping: false 		// 브랜치에 해당되는 행을 출력 여부
+	};
+
+
+    mainColumnLayout = [
+        { dataField: "SIT_CD", headerText: "사업장코드", width: 80, cellMerge : true },
+        { dataField: "SIT_NM", headerText: "사업장명", width: 100, cellMerge : true },
+        { dataField: "CLS_CD", headerText: "식당코드", width: 80, cellMerge : true },
+        { dataField: "CLS_NM", headerText: "식당명", width: 100, cellMerge : true, style: "redCell",
+        	headerTooltip : { show:true, tooltipHtml : "innerHTML 사용 시 TemplateRenderer 사용" },
+        	renderer : { // HTML 템플릿 렌더러 사용
+    			type : "TemplateRenderer"
+    			// mainProp 에서 wordWrap : true 로 설정해야 적용됨
+    		},
+    	},
+        { dataField: "SEL_PERIOD", headerText: "매출일자", width: 160 },
+        { headerText: "주말",
+        	children: [
+        		{ headerText: "일요일",
+        			children: [
+        				{ dataField: "SUN_CUS", headerText: "객수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "SUN_CNT", headerText: "건수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "SUN_TOT", headerText: "총매출", width: 100, dataType: "numeric", formatString: "#,##0" }
+        			]
+        		}
+        	]
+        },
+        { headerText: "평일",
+        	children: [
+        		{ headerText: "월요일",
+        			children: [
+        				{ dataField: "MON_CUS", headerText: "객수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "MON_CNT", headerText: "건수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "MON_TOT", headerText: "총매출", width: 100, dataType: "numeric", formatString: "#,##0" }
+        			]
+        		},
+        		{ headerText: "화요일",
+        			children: [
+        				{ dataField: "TUE_CUS", headerText: "객수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "TUE_CNT", headerText: "건수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "TUE_TOT", headerText: "총매출", width: 100, dataType: "numeric", formatString: "#,##0" }
+        			]
+        		},
+        		{ headerText: "수요일",
+        			children: [
+        				{ dataField: "WED_CUS", headerText: "객수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "WED_CNT", headerText: "건수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "WED_TOT", headerText: "총매출", width: 100, dataType: "numeric", formatString: "#,##0" }
+        			]
+        		},
+        		{ headerText: "목요일",
+        			children: [
+        				{ dataField: "THU_CUS", headerText: "객수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "THU_CNT", headerText: "건수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "THU_TOT", headerText: "총매출", width: 100, dataType: "numeric", formatString: "#,##0" }
+        			]
+        		},
+        		{ headerText: "금요일",
+        			children: [
+        				{ dataField: "FRI_CUS", headerText: "객수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "FRI_CNT", headerText: "건수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "FRI_TOT", headerText: "총매출", width: 100, dataType: "numeric", formatString: "#,##0" }
+        			]
+        		},
+        		{ headerText: "토요일",
+        			children: [
+        				{ dataField: "SAT_CUS", headerText: "객수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "SAT_CNT", headerText: "건수", width: 100, dataType: "numeric", formatString: "#,##0" },
+        				{ dataField: "SAT_TOT", headerText: "총매출", width: 100, dataType: "numeric", formatString: "#,##0" }
+        			]
+        		}
+        	]
+        },
+        { headerText: "전체",
+        	children: [
+        		{ headerText: "일주일",
+        			children: [
+        				{ dataField: "WEEK_CUS", headerText: "객수", width: 100, dataType: "numeric", formatString: "#,##0",
+        					expFunction: function(rowIndex, columnIndex, item, dataField) {
+        						return item.SUN_CUS + item.MON_CUS + item.TUE_CUS + item.WED_CUS + item.THU_CUS + item.FRI_CUS + item.SAT_CUS;
+        					}
+        				},
+        				{ dataField: "WEEK_CNT", headerText: "건수", width: 100, dataType: "numeric", formatString: "#,##0",
+        					expFunction: function(rowIndex, columnIndex, item, dataField) {
+        						return item.SUN_CNT + item.MON_CNT + item.TUE_CNT + item.WED_CNT + item.THU_CNT + item.FRI_CNT + item.SAT_CNT;
+        					}
+        				},
+        				{ dataField: "WEEK_TOT", headerText: "총매출", width: 100, dataType: "numeric", formatString: "#,##0",
+        					expFunction: function(rowIndex, columnIndex, item, dataField) {
+        						return item.SUN_TOT + item.MON_TOT + item.TUE_TOT + item.WED_TOT + item.THU_TOT + item.FRI_TOT + item.SAT_TOT;
+        					}
+        				}
+        			]
+        		}
+        	]
+        }
+    ];
+    
+	// 푸터 설정
+	var footerLayout = [];
+    footerLayout[0] = [ {
+    	labelText : "합계",
+    	positionField : "SIT_CD",
+//     	colSpan : 4
+    },
+    { dataField : "SUN_CUS", positionField : "SUN_CUS", operation : "SUM", formatString : "#,##0" },
+    { dataField : "SUN_CNT", positionField : "SUN_CNT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "SUN_TOT", positionField : "SUN_TOT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "MON_CUS", positionField : "MON_CUS", operation : "SUM", formatString : "#,##0" },
+    { dataField : "MON_CNT", positionField : "MON_CNT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "MON_TOT", positionField : "MON_TOT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "TUE_CUS", positionField : "TUE_CUS", operation : "SUM", formatString : "#,##0" },
+    { dataField : "TUE_CNT", positionField : "TUE_CNT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "TUE_TOT", positionField : "TUE_TOT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "WED_CUS", positionField : "WED_CUS", operation : "SUM", formatString : "#,##0" },
+    { dataField : "WED_CNT", positionField : "WED_CNT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "WED_TOT", positionField : "WED_TOT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "THU_CUS", positionField : "THU_CUS", operation : "SUM", formatString : "#,##0" },
+    { dataField : "THU_CNT", positionField : "THU_CNT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "THU_TOT", positionField : "THU_TOT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "FRI_CUS", positionField : "FRI_CUS", operation : "SUM", formatString : "#,##0" },
+    { dataField : "FRI_CNT", positionField : "FRI_CNT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "FRI_TOT", positionField : "FRI_TOT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "SAT_CUS", positionField : "SAT_CUS", operation : "SUM", formatString : "#,##0" },
+    { dataField : "SAT_CNT", positionField : "SAT_CNT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "SAT_TOT", positionField : "SAT_TOT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "WEEK_CUS", positionField : "WEEK_CUS", operation : "SUM", formatString : "#,##0" },
+    { dataField : "WEEK_CNT", positionField : "WEEK_CNT", operation : "SUM", formatString : "#,##0" },
+    { dataField : "WEEK_TOT", positionField : "WEEK_TOT", operation : "SUM", formatString : "#,##0" }
+    ];
+    
+    footerLayout[1] = [ {
+    	labelText : "최소값",
+    	positionField : "SIT_CD",
+//     	colSpan : 4
+    },
+    { dataField : "SUN_CUS", positionField : "SUN_CUS", operation : "MIN", formatString : "#,##0" },
+    { dataField : "SUN_CNT", positionField : "SUN_CNT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "SUN_TOT", positionField : "SUN_TOT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "MON_CUS", positionField : "MON_CUS", operation : "MIN", formatString : "#,##0" },
+    { dataField : "MON_CNT", positionField : "MON_CNT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "MON_TOT", positionField : "MON_TOT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "TUE_CUS", positionField : "TUE_CUS", operation : "MIN", formatString : "#,##0" },
+    { dataField : "TUE_CNT", positionField : "TUE_CNT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "TUE_TOT", positionField : "TUE_TOT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "WED_CUS", positionField : "WED_CUS", operation : "MIN", formatString : "#,##0" },
+    { dataField : "WED_CNT", positionField : "WED_CNT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "WED_TOT", positionField : "WED_TOT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "THU_CUS", positionField : "THU_CUS", operation : "MIN", formatString : "#,##0" },
+    { dataField : "THU_CNT", positionField : "THU_CNT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "THU_TOT", positionField : "THU_TOT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "FRI_CUS", positionField : "FRI_CUS", operation : "MIN", formatString : "#,##0" },
+    { dataField : "FRI_CNT", positionField : "FRI_CNT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "FRI_TOT", positionField : "FRI_TOT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "SAT_CUS", positionField : "SAT_CUS", operation : "MIN", formatString : "#,##0" },
+    { dataField : "SAT_CNT", positionField : "SAT_CNT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "SAT_TOT", positionField : "SAT_TOT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "WEEK_CUS", positionField : "WEEK_CUS", operation : "MIN", formatString : "#,##0" },
+    { dataField : "WEEK_CNT", positionField : "WEEK_CNT", operation : "MIN", formatString : "#,##0" },
+    { dataField : "WEEK_TOT", positionField : "WEEK_TOT", operation : "MIN", formatString : "#,##0" }
+    ];
+    
+    footerLayout[2] = [ {
+    	labelText : "최대값",
+    	positionField : "SIT_CD",
+//     	colSpan : 4
+    },
+    { dataField : "SUN_CUS", positionField : "SUN_CUS", operation : "MAX", formatString : "#,##0" },
+    { dataField : "SUN_CNT", positionField : "SUN_CNT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "SUN_TOT", positionField : "SUN_TOT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "MON_CUS", positionField : "MON_CUS", operation : "MAX", formatString : "#,##0" },
+    { dataField : "MON_CNT", positionField : "MON_CNT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "MON_TOT", positionField : "MON_TOT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "TUE_CUS", positionField : "TUE_CUS", operation : "MAX", formatString : "#,##0" },
+    { dataField : "TUE_CNT", positionField : "TUE_CNT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "TUE_TOT", positionField : "TUE_TOT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "WED_CUS", positionField : "WED_CUS", operation : "MAX", formatString : "#,##0" },
+    { dataField : "WED_CNT", positionField : "WED_CNT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "WED_TOT", positionField : "WED_TOT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "THU_CUS", positionField : "THU_CUS", operation : "MAX", formatString : "#,##0" },
+    { dataField : "THU_CNT", positionField : "THU_CNT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "THU_TOT", positionField : "THU_TOT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "FRI_CUS", positionField : "FRI_CUS", operation : "MAX", formatString : "#,##0" },
+    { dataField : "FRI_CNT", positionField : "FRI_CNT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "FRI_TOT", positionField : "FRI_TOT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "SAT_CUS", positionField : "SAT_CUS", operation : "MAX", formatString : "#,##0" },
+    { dataField : "SAT_CNT", positionField : "SAT_CNT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "SAT_TOT", positionField : "SAT_TOT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "WEEK_CUS", positionField : "WEEK_CUS", operation : "MAX", formatString : "#,##0" },
+    { dataField : "WEEK_CNT", positionField : "WEEK_CNT", operation : "MAX", formatString : "#,##0" },
+    { dataField : "WEEK_TOT", positionField : "WEEK_TOT", operation : "MAX", formatString : "#,##0" }
+    ];
+
+    grdMain = AUIGridUtil.create( "#grdMain", mainColumnLayout, mainProps );
+	
+    // 푸터 레이아웃 세팅
+	AUIGridUtil.setFooter(grdMain, footerLayout);
+    
+    AUIGrid.setGridData(grdMain, myData);
+    
+    
+    AUIGrid.hideColumnGroup(grdMain, "CLS_CD");
+    /* Grid-목록 */
+});
+
+
+//서버 사이드에서 매핑한 데이터
+var myData = [{
+    "SIT_CD": "00001",
+    "SIT_NM": "식당1",
+    "CLS_CD": "01",
+    "CLS_NM": "일식",
+    "SEL_PERIOD": "2022/04/24 ~ 2022/04/30",
+    "SUN_CUS": 10,
+    "SUN_CNT": 4,
+    "SUN_TOT": 110090,
+    "MON_CUS": 2,
+    "MON_CNT": 2,
+    "MON_TOT": 18000,
+    "TUE_CUS": 1,
+    "TUE_CNT": 1,
+    "TUE_TOT": 12000,
+    "WED_CUS": 0,
+    "WED_CNT": 0,
+    "WED_TOT": 0,
+    "THU_CUS": 5,
+    "THU_CNT": 3,
+    "THU_TOT": 81680,
+    "FRI_CUS": 20,
+    "FRI_CNT": 9,
+    "FRI_TOT": 264240,
+    "SAT_CUS": 20,
+    "SAT_CNT": 12,
+    "SAT_TOT": 343780
+}, {
+	"SIT_CD": "00001",
+    "SIT_NM": "식당1",
+    "CLS_CD": "01",
+    "CLS_NM": "일식",
+    "SEL_PERIOD": "2022/05/01 ~ 2022/05/07",
+    "SUN_CUS": 0,
+    "SUN_CNT": 0,
+    "SUN_TOT": 0,
+    "MON_CUS": 0,
+    "MON_CNT": 0,
+    "MON_TOT": 0,
+    "TUE_CUS": 11,
+    "TUE_CNT": 7,
+    "TUE_TOT": 155920,
+    "WED_CUS": 5,
+    "WED_CNT": 5,
+    "WED_TOT": 184760,
+    "THU_CUS": 3,
+    "THU_CNT": 3,
+    "THU_TOT": 61680,
+    "FRI_CUS": 14,
+    "FRI_CNT": 7,
+    "FRI_TOT": 164240,
+    "SAT_CUS": 55,
+    "SAT_CNT": 21,
+    "SAT_TOT": 593780
+}, {
+	"SIT_CD": "00001",
+    "SIT_NM": "식당1",
+    "CLS_CD": "11",
+    "CLS_NM": "튀김<br/>덮밥",
+    "SEL_PERIOD": "2022/05/01 ~ 2022/05/07",
+    "SUN_CUS": 0,
+    "SUN_CNT": 0,
+    "SUN_TOT": 0,
+    "MON_CUS": 0,
+    "MON_CNT": 0,
+    "MON_TOT": 0,
+    "TUE_CUS": 8,
+    "TUE_CNT": 7,
+    "TUE_TOT": 55920,
+    "WED_CUS": 2,
+    "WED_CNT": 1,
+    "WED_TOT": 16760,
+    "THU_CUS": 3,
+    "THU_CNT": 3,
+    "THU_TOT": 28680,
+    "FRI_CUS": 14,
+    "FRI_CNT": 7,
+    "FRI_TOT": 132220,
+    "SAT_CUS": 23,
+    "SAT_CNT": 15,
+    "SAT_TOT": 303780
+}, {
+	"SIT_CD": "00002",
+    "SIT_NM": "식당2",
+    "CLS_CD": "02",
+    "CLS_NM": "한식",
+    "SEL_PERIOD": "2022/05/01 ~ 2022/05/07",
+    "SUN_CUS": 80,
+    "SUN_CNT": 58,
+    "SUN_TOT": 1288000,
+    "MON_CUS": 0,
+    "MON_CNT": 0,
+    "MON_TOT": 0,
+    "TUE_CUS": 12,
+    "TUE_CNT": 10,
+    "TUE_TOT": 108000,
+    "WED_CUS": 3,
+    "WED_CNT": 1,
+    "WED_TOT": 32000,
+    "THU_CUS": 20,
+    "THU_CNT": 11,
+    "THU_TOT": 180000,
+    "FRI_CUS": 14,
+    "FRI_CNT": 7,
+    "FRI_TOT": 148000,
+    "SAT_CUS": 20,
+    "SAT_CNT": 10,
+    "SAT_TOT": 224000
+}, {
+	"SIT_CD": "00003",
+    "SIT_NM": "식당3",
+    "CLS_CD": "03",
+    "CLS_NM": "양식",
+    "SEL_PERIOD": "2022/05/01 ~ 2022/05/07",
+    "SUN_CUS": 80,
+    "SUN_CNT": 40,
+    "SUN_TOT": 1200000,
+    "MON_CUS": 6,
+    "MON_CNT": 3,
+    "MON_TOT": 65000,
+    "TUE_CUS": 12,
+    "TUE_CNT": 5,
+    "TUE_TOT": 118000,
+    "WED_CUS": 2,
+    "WED_CNT": 1,
+    "WED_TOT": 54000,
+    "THU_CUS": 20,
+    "THU_CNT": 8,
+    "THU_TOT": 488000,
+    "FRI_CUS": 14,
+    "FRI_CNT": 7,
+    "FRI_TOT": 314000,
+    "SAT_CUS": 20,
+    "SAT_CNT": 10,
+    "SAT_TOT": 544000
+}, {
+	"SIT_CD": "00004",
+    "SIT_NM": "식당4",
+    "CLS_CD": "04",
+    "CLS_NM": "한식",
+    "SEL_PERIOD": "2022/04/24 ~ 2022/04/30",
+    "SUN_CUS": 0,
+    "SUN_CNT": 0,
+    "SUN_TOT": 0,
+    "MON_CUS": 79,
+    "MON_CNT": 79,
+    "MON_TOT": 553000,
+    "TUE_CUS": 111,
+    "TUE_CNT": 111,
+    "TUE_TOT": 777000,
+    "WED_CUS": 100,
+    "WED_CNT": 100,
+    "WED_TOT": 700000,
+    "THU_CUS": 98,
+    "THU_CNT": 98,
+    "THU_TOT": 686000,
+    "FRI_CUS": 89,
+    "FRI_CNT": 89,
+    "FRI_TOT": 623000,
+    "SAT_CUS": 0,
+    "SAT_CNT": 0,
+    "SAT_TOT": 0
+}, {
+	"SIT_CD": "00004",
+    "SIT_NM": "식당4",
+    "CLS_CD": "04",
+    "CLS_NM": "한식",
+    "SEL_PERIOD": "2022/05/01 ~ 2022/05/07",
+    "SUN_CUS": 0,
+    "SUN_CNT": 0,
+    "SUN_TOT": 0,
+    "MON_CUS": 100,
+    "MON_CNT": 100,
+    "MON_TOT": 700000,
+    "TUE_CUS": 124,
+    "TUE_CNT": 124,
+    "TUE_TOT": 868000,
+    "WED_CUS": 88,
+    "WED_CNT": 88,
+    "WED_TOT": 616000,
+    "THU_CUS": 98,
+    "THU_CNT": 98,
+    "THU_TOT": 686000,
+    "FRI_CUS": 87,
+    "FRI_CNT": 87,
+    "FRI_TOT": 609000,
+    "SAT_CUS": 0,
+    "SAT_CNT": 0,
+    "SAT_TOT": 0
+}]
+</script>
+</html>

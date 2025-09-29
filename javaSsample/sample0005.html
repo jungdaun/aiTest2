@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/dhtmlxAppLayout7 :: layout(~{::script})}"  xmlns:th="http://www.thymeleaf.org">
+
+<script th:src="@{/js/auigrid/includeAUIGrid.js}"></script>
+
+<script>
+
+//main layout
+var layoutMain;
+
+// main grid
+var grdMain;
+
+// 그룹코드 toolbar
+var toolbar;
+
+// 그리드 구분값
+var gubun;
+
+// 그리드 Properties
+var grd1Props;
+var grd2Props;
+
+
+$(function() {
+
+	//
+	// 1. 기본 layout 구성
+	const layoutConfig = {
+	    type: "line",
+	    
+	    rows: [
+	        { id: "toolbar", height: "85px", headerHeight: "35px" },
+	        { id: "grid", height: "95%", html: '<div id="grdMain" style="height: 100%;"></div>'}
+	    ]
+	};
+	
+	// layout 생성
+    layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+	
+	
+    //
+    // 2. Grid 생성 (그리드 A)
+    grd1Props = {
+   	      editable: true 				// 수정 가능
+   	    , selectionMode: "multipleRow" 	// 선택모드
+   	    , showRowCheckColumn: true 		// 추가 행 체크박스 출력 여부
+   	    , showRowAllCheckBox: true 		// 헤더에서 체크박스 전체 선택 가능 여부
+   	    , enableRowCheckShiftKey: true 	// 엑스트라 체크박스에 shiftKey + 클릭으로 다중 선택 할지 여부 (기본값 : false)
+    };
+
+ 	
+	// 엑스트라 체크박스 체커블 함수
+	// 이 함수는 사용자가 체크박스를 클릭 할 때 1번 호출됩니다.
+// 	grd1Props.rowCheckableFunction = function(rowIndex, isChecked, item) {
+// 		if(item.product == "LG G3") { // 제품이 LG G3 인 경우 사용자 체크 못하게 함.
+// 			return false;
+// 		}
+// 		return true;
+// 	},
+
+    grd1ColumnLayout = [
+        { dataField: "GRP_CD", headerText: "그룹코드", width: 120 },
+        { dataField: "GRP_CD_NM", headerText: "그룹코드명" },
+        { dataField: "GRP_CD_DESC", headerText: "설명" },
+        { dataField: "USE_YN", headerText: "사용여부", width: 120,
+    		renderer : {
+    			type : "DropDownListRenderer",
+    			list : [{key: "Y", value: "사용"}, {key: "N", value: "미사용"}], //key-value Object 로 구성된 리스트
+    			keyField : "key", // key 에 해당되는 필드명
+    			valueField : "value" // value 에 해당되는 필드명
+    		}
+        }
+    ];
+    
+    grdMain = AUIGridUtil.create( "#grdMain", grd1ColumnLayout, grd1Props );
+
+    gubun = "A";	// A 그리드 구분값
+	
+	
+	//
+	// 3. Grid 생성 (그리드 B)
+    grd2Props = {
+   	      editable: true 				// 수정 가능
+   	    , selectionMode: "multipleRow" 	// 선택모드
+   	    , showRowCheckColumn: true 		// 추가 행 체크박스 출력 여부
+   	 	, showRowAllCheckBox: true 		// 헤더에서 체크박스 전체 선택 가능 여부
+   	 	, enableRowCheckShiftKey: true 	// 엑스트라 체크박스에 shiftKey + 클릭으로 다중 선택 할지 여부 (기본값 : false)
+   	    //showRowNumColumn: false 		// 로우넘 숨기기
+    };
+
+    grd2ColumnLayout = [
+        { dataField: "COMM_CD", headerText: "코드", width: 120 },
+        { dataField: "COMM_CD_NM", headerText: "코드명" },
+        { dataField: "COMM_CD_DESC", headerText: "설명" },
+        /*
+        { dataField: "SORT_SEQ", headerText: "정렬", width: 120, headerTooltip : { show:true, tooltipHtml : "0~100 사이 입력 가능" },
+        	editRenderer : AUIGridRendererUtil.getNumericStep()
+        },
+        */
+        AUIGridUtil.getNumericStepColumnConfig({ dataField: "SORT_SEQ", headerText: "정렬", width: 120, headerTooltip: "0~100 사이 입력 가능" }),
+        { dataField: "USE_YN", headerText: "사용여부", width: 120,
+        	renderer : {
+    			type : "CheckBoxEditRenderer",
+    			editable : true,
+    			checkValue : "Y",
+    			unCheckValue : "N"
+    		}
+        }
+    ];
+    
+    //grdDtl = AUIGridUtil.create( "#grdDtl", dtlColumnLayout, dtlProps );
+
+
+	//
+    // 4. Toolbar 버튼 생성 (그룹코드 정보)
+    toolbar = new dhx.Toolbar(null, {
+      css:"dhx_widget--bordered"
+    });
+    const toolbarConfig = [
+        { id: "callA", value: "A 그리드" },
+        { type: "separator" },
+        { id: "callB", value: "B 그리드" },
+        { type: "separator" },
+        { id: "setMultiData", value: "여러 컬럼 변경" },
+        { type: "separator" },
+        { id: "inputValue", type: "input", width: "100px", value: "", placeholder: "value" },
+        { type: "separator" },
+        { id: "setColData", value: "컬럼 데이터 일괄 변경" },
+        { type: "separator" }
+    ];
+    toolbar.data.parse(toolbarConfig);
+    layoutMain.getCell("toolbar").attach(toolbar);
+    
+    
+    //
+    // 5. Toolbar 이벤트
+    toolbar.events.on("click", function(id,e){
+        switch(id) {
+            case "callA":
+                fn_callGridA(grd1ColumnLayout, grd1Props);
+                break;
+            case "callB":
+                fn_callGridB(grd2ColumnLayout, grd2Props);
+                break;
+            case "setColData":
+                fn_setColData();
+                break;
+            case "setMultiData":
+                fn_setMultiData();
+                break;
+            default:
+                break;
+        }
+    });
+    
+//     AUIGrid.bind(grdMain, "rowCheckClick", function(event) {
+//     	alert("rowIndex: " + event.rowIndex + ", id: " + event.item.id + ", name: " + event.item.name + ", checked: " + event.checked + ", shiftKey: " + event.shiftKey + ", shiftIndex: " + event.shiftIndex);
+//     });
+
+
+	
+});
+
+/**
+ * Comments : 현재 grdMain 에 설정된 그리드 삭제 후 A 그리드 생성 
+ * @return
+ */
+function fn_callGridA(grd1ColumnLayout, grd1Props) {
+	if(gubun == "A") {
+		return;
+	}
+	
+	AUIGridUtil.destroy("#grdMain");
+    
+	grdMain = AUIGridUtil.create( "#grdMain", grd1ColumnLayout, grd1Props );
+	
+	gubun = "A";
+	
+	fn_search();
+}
+
+/**
+ * Comments : 현재 grdMain 에 설정된 그리드 삭제 후 B 그리드 생성 
+ * @return
+ */
+function fn_callGridB(grd2ColumnLayout, grd2Props) {
+	if(gubun == "B") {
+		return;
+	}
+	
+	AUIGridUtil.destroy("#grdMain");
+    
+	grdMain = AUIGridUtil.create( "#grdMain", grd2ColumnLayout, grd2Props );
+	
+	gubun = "B";
+	
+	fn_search();
+}
+
+/**
+ * Comments : 그리드 목록을 조회한다.
+ * @return
+ */
+function fn_search() {
+	if(gubun == "A") {	// call A
+		var postParam;
+		
+	    gfn_ajaxGetAUIGrid({
+	           gridName    : grdMain
+	          ,postParam   : postParam
+	          ,type        : "POST"
+	          ,url         : "/sample/sample0005/selectSample0005.do"
+	          ,success     : function(responseData) {
+	               console.log(":success...gridA");
+	          }
+        });
+	} else if(gubun == "B") {	// call B
+		var postParam = {GRP_CD: "VA007"};
+
+	    gfn_ajaxGetAUIGrid({
+	           gridName: grdMain
+	          ,postParam: postParam
+	          ,type        : "POST"
+	          ,url         : "/sample/sample0005/selectSample0005Dtl.do"
+	          ,success     : function(responseData) {
+	               console.log(":success...gridB");
+	          }
+	    });
+	}
+}
+
+/**
+ * Comments : 버튼 클릭 시 체크된 그리드의 특정 셀 값을 일괄 변경한다.
+ * @param
+ * @return
+ */
+function fn_setColData() {
+	var checkedItems = AUIGridUtil.getCheckedRowItems(grdMain);	// 엑스트라 체크박스 체크된 Rows
+	if(checkedItems.length <= 0) {
+		alert("선택된 체크박스 없음");
+		return;
+	}
+	var str = "";
+	var rowItem;
+	var colName;
+	var value = "";
+	value = toolbar.getState().inputValue;
+	
+	if(gubun == "A") {
+		colName = "GRP_CD_DESC";
+	} else if(gubun == "B") {
+		colName = "COMM_CD_DESC";
+	}
+	for(var i=0, len = checkedItems.length; i<len; i++) {
+		rowItem = checkedItems[i];
+// 		str += "row : " + rowItem.rowIndex + ", id :" + rowItem.item.GRP_CD + ", name : " + rowItem.item.GRP_CD_NM  + "\n";
+		
+		AUIGrid.setCellValue(grdMain, rowItem.rowIndex, colName, value);
+	}
+}
+
+/**
+ * Comments : 버튼 클릭 시 체크된 그리드의 특정 셀 값들을 일괄 변경한다.
+ * @param
+ * @return
+ */
+function fn_setMultiData() {
+	var checkedItems = AUIGridUtil.getCheckedRowItems(grdMain);	// 엑스트라 체크박스 체크된 Rows
+	if(checkedItems.length <= 0) {
+		alert("선택된 체크박스 없음");
+		return;
+	}
+	var str = "";
+	var rowItem;
+	
+	for(var i=0, len = checkedItems.length; i<len; i++) {
+		rowItem = checkedItems[i];
+// 		str += "row : " + rowItem.rowIndex + ", id :" + rowItem.item.GRP_CD + ", name : " + rowItem.item.GRP_CD_NM  + "\n";
+		
+		AUIGridUtil.setRowData(grdMain, {"GRP_CD_NM" : "그룹코드명 일괄 변경", "GRP_CD_DESC" : "그룹코드 설명 일괄 변경", "USE_YN" : "N"}, rowItem.rowIndex);
+	}
+}
+
+</script>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+
+<html th:replace="~{layout/dhtmlxAppLayout7 :: layout(~{::script})}"  xmlns:th="http://www.thymeleaf.org">
+
+<!-- AUIGrid 사용 시 반드시 지정 -->
+<script th:src="@{/js/auigrid/includeAUIGrid.js}"></script>
+
+<script>
+//////////////////////////////////////////////////////////////////
+// Form 변수
+//////////////////////////////////////////////////////////////////
+
+//main layout
+var layoutMain;
+
+// 검색 조건 form
+var frmSearch;
+
+// 그룹코드 grid
+var grdA;
+
+//코드 grid
+var grdB;
+
+// toolbar
+var toolbar;
+
+//
+var flag = "B";
+
+
+//////////////////////////////////////////////////////////////////
+// 초기화 작업
+//////////////////////////////////////////////////////////////////
+$(function() {
+	
+	//
+	// 0. 공통 button 제어
+	
+	fn_setCommonButtonLabel("etc1", "그룹코드 조회");
+	fn_setCommonButtonLabel("etc2", "공통코드 조회");
+	
+	//
+	// 1. 기본 layout 구성
+	const layoutConfig = {
+		type: "line",
+		rows: [
+			{ id: "frmSearch", height: SearchFormHeight[1] },
+			{ id: "gridA", height: "45%", header: "그룹코드 목록", headerHeight: "35px", html: '<div id="grdA" style="height: calc(100% - 10px);"></div>' },
+			{ id: "toolbar", height: "32px", headerHeight: 0 },
+			{ id: "gridB", height: "45%", header: "공통코드 목록", headerHeight: "35px", html: '<div id="grdB" style="height: calc(100% - 10px);"></div>' }
+		]
+	};
+	
+	// layout 생성
+	layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+	
+	
+	//
+	// 2. Form controls 생성 (검색조건)
+	frmSearch = new dhx.Form(null, {
+		rows: [
+			{
+				cols: [
+					FormUtil.getInputConfig( { width: "300px", label: "그룹코드", name: "GRP_CD", labelWidth: "300px" } ),
+					FormUtil.getInputConfig( { width: "300px", label: "그룹코드명", name: "GRP_CD_NM", labelWidth: "300px" } ),
+					FormUtil.getSelectConfig(
+						{ width: "300px", label: "사용여부", name: "USE_YN", labelWidth: "300px"}
+					  , [ { content: "전체", value: "" }, { content: "사용", value: "Y" }, { content:"미사용", value:"N" } ]
+					)
+				]
+			}
+		]
+	});
+	
+	layoutMain.getCell("frmSearch").attach(frmSearch);
+	
+	
+	//
+	// 3. Grid A 생성 (그룹코드 목록)
+	let grdAProps = {
+		  editable: false
+		, showStateColumn : true
+		, enableFilter: true
+	};
+	
+	grdAColumnLayout = [
+		{ dataField: "GRP_CD", headerText: "그룹코드", width: 120 },
+		{ dataField: "GRP_CD_NM", headerText: "그룹코드명" },
+		{ dataField: "GRP_CD_DESC", headerText: "설명" },
+		{ dataField: "USE_YN", headerText: "사용여부", width: 120,
+			renderer : {
+				type : "DropDownListRenderer",
+				list : [{key: "Y", value: "사용"}, {key: "N", value: "미사용"}], //key-value Object 로 구성된 리스트
+				keyField : "key", // key 에 해당되는 필드명
+				valueField : "value" // value 에 해당되는 필드명
+			}
+		}
+	];
+	
+	grdA = AUIGridUtil.create( "grdA", grdAColumnLayout, grdAProps );
+	
+	
+	//
+	// 4. Grid B 생성 (공통코드 목록)
+	let grdBProps = {
+		  editable: false
+		, showStateColumn : true
+		, enableFilter: true
+	};
+	
+	grdBColumnLayout = [
+		{ dataField: "COMM_CD", headerText: "코드", width: 120 },
+		{ dataField: "COMM_CD_NM", headerText: "코드명" },
+		{ dataField: "COMM_CD_DESC", headerText: "설명" },
+		AUIGridUtil.getNumericStepColumnConfig({ dataField: "SORT_SEQ", headerText: "정렬", width: 120, headerTooltip: "0~100 사이 입력 가능" }),
+		{ dataField: "USE_YN", headerText: "사용여부", width: 120,
+			renderer : {
+				type : "CheckBoxEditRenderer",
+				editable : true,
+				checkValue : "Y",
+				unCheckValue : "N"
+			}
+		}
+	];
+	
+	grdB = AUIGridUtil.create( "grdB", grdBColumnLayout, grdBProps );
+
+	
+	//
+	// 5. Toolbar 버튼 생성
+	toolbar = FormUtil.createToolbar(
+		null, null,
+		[
+			  { id: "gridUp", value: "▲" }
+			, { id: "gridDown", value: "▼" }
+		],
+		{
+			click: function(id, e) {
+				switch(id) {
+					case "gridUp":
+						fn_gridUp();
+						break;
+						
+					case "gridDown":
+						fn_gridDown();
+						break;
+						
+					default:
+						break;
+				}
+			}
+		}
+	);
+	
+	layoutMain.getCell("toolbar").attach(toolbar);
+	
+});
+
+//////////////////////////////////////////////////////////////////
+// 공통 button
+//////////////////////////////////////////////////////////////////
+
+/**
+ * 조회 button click
+ */
+function fn_search() {
+	fn_searchA();
+	fn_searchB();
+}
+
+/**
+ * A search
+ */
+function fn_etc1() {
+	fn_searchA();
+}
+
+/**
+ * B search
+ */
+function fn_etc2() {
+	fn_searchB();
+}
+
+//////////////////////////////////////////////////////////////////
+// 개발자 정의 function
+//////////////////////////////////////////////////////////////////
+
+/**
+ * A search (그룹코드 조회)
+ */
+function fn_searchA() {
+	var postParam = FormUtil.getFormValues(frmSearch);
+	
+	gfn_ajaxGetAUIGrid({
+			gridName  : grdA
+		  , postParam : postParam
+		  , type	  : "POST"
+		  , url		  : "/sample/sample0010/selectSample0010A.do"
+		  , success	  : function(responseData) {}
+		  , fail	  : function() { }
+		  , complete  : function(data) { }
+	});
+}
+
+/**
+ * B search (공통코드 조회)
+ */
+function fn_searchB() {
+	var postParam = {GRP_CD: "VA007"};
+	
+	gfn_ajaxGetAUIGrid({
+			gridName  : grdB
+		  , postParam : postParam
+		  , type	  : "POST"
+		  , url		  : "/sample/sample0010/selectSample0010B.do"
+		  , success	  : function(responseData) {}
+		  , fail	  : function() { }
+		  , complete  : function(data) { }
+    });
+}
+
+//////////////////////////////////////////////////////////////////
+//event 처리
+//////////////////////////////////////////////////////////////////
+
+/**
+ * gridUp
+ */
+function fn_gridUp() {
+	if(flag == "A") {	// A 그리드 확장 상태 시
+		// 그리드 div 가로 세로
+		let width = $("#grdA").width();
+		let height = $("#grdA").height();
+		
+		layoutMain.getCell("frmSearch").show();	// 안하면 dhtmlx layout 수정을 하지 않음
+		
+		// dhtmlx layout 높이 수정
+		layoutMain.getCell("gridA").config.height = "45%";
+		// 그리드 사이즈 조정 (확장된 그리드 height 의 절반)
+		AUIGrid.resize(grdA, width, height / 2);
+		
+		flag = "B";
+	}
+}
+
+/**
+ * gridDown
+ */
+function fn_gridDown() {
+	if(flag == "B") {	// A 그리드 축소 상태 시
+		// 그리드 div 가로 세로
+		let width = $("#grdA").width();
+		let height = $("#grdA").height();
+		
+		layoutMain.getCell("frmSearch").show();	// 안하면 dhtmlx layout 수정을 하지 않음
+		
+		// dhtmlx layout 높이 수정
+		layoutMain.getCell("gridA").config.height = "90%";
+		// 그리드 사이즈 조정 (기존 그리드 height 의 2배)
+		AUIGrid.resize(grdA, width, height * 2);
+		
+		flag = "A";
+	}
+}
+
+
+</script>
+</html>

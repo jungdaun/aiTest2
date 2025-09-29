@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+
+<!-- 
+	Web Editor(RTE)
+		 
+	@author sklee21
+ -->
+
+<html th:replace="~{layout/dhtmlxAppLayout7 :: layout(~{::script})}"  xmlns:th="http://www.thymeleaf.org">
+
+<script type="text/javascript" src="/ckeditor/ckeditor.js"></script>
+<script>
+//////////////////////////////////////////////////////////////////
+// Form 변수
+//////////////////////////////////////////////////////////////////
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// 초기화 작업
+//////////////////////////////////////////////////////////////////
+$(function() {
+	fn_setCommonButtonLabel("ETC1", "Read-Only + Toolbar 감추기");
+	fn_setCommonButtonLabel("ETC2", "편집 Mode");
+	
+	
+	//
+	// 1. 기본 layout 구성
+	const layoutConfig = {
+	    type: "line",
+	    
+	    rows: [
+            // 세 번째 줄 영역: 외부 페이지 load 영역
+            {
+            	width: "100%",
+            	height: "100%",
+       			rows: [
+    	            FormUtil.getExtPageLayoutConfig({ id: "webEditorArea", width: "80%", height: "100%" })
+       			]
+            }
+	    ]
+	};
+	
+	// layout 생성
+    layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+    
+	
+	//
+	// 2. Page 생성
+	//
+	// 2.1.web editor load
+    FormUtil.loadWebEditor("webEditorArea", "sampleWebEditor", {height: 600});
+});
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// 공통 function
+//////////////////////////////////////////////////////////////////
+
+function fn_search() {
+	FormUtil.getWebEditor("webEditorArea").fn_setContent("<p><strong>웹</strong> <em>에디터</em> 내용</p>");
+}
+
+
+function fn_save() {
+	gfn_alert( FormUtil.getWebEditor("webEditorArea").fn_getContent() );
+}
+
+
+function fn_etc1() {
+	let webEditor = FormUtil.getWebEditor("webEditorArea");
+	webEditor.fn_showToolbar(false);
+	webEditor.fn_setReadOnly(true);
+}
+
+
+function fn_etc2() {
+	let webEditor = FormUtil.getWebEditor("webEditorArea");
+	webEditor.fn_showToolbar(true);
+	webEditor.fn_setReadOnly(false);
+}
+
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// 개발자 정의 function
+//////////////////////////////////////////////////////////////////
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// event 처리
+//////////////////////////////////////////////////////////////////
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// callback 처리
+//////////////////////////////////////////////////////////////////
+
+
+
+
+
+</script>
+</html>

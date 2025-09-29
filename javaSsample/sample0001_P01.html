@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<!-- 
+	[!IMPORTANT!]
+		- dhtmlxAppLayout7이 아닌 dhtmlxPopupLayout7을 지정해야함
+ -->
+<html th:replace="~{layout/dhtmlxPopupLayout7 :: layout(~{::script})}"  xmlns:th="http://www.thymeleaf.org">
+
+<script>
+//
+// Popup 화면 공통 초기화 수행(필수 호출)
+// 이 초기화 함수를 실행하면 현재 Popup page에 다음과 같은 변수 생성
+//	- popupCallback: Popup에 대한 callback 함수
+//	- popupParameter: 부모 화면에서 전달받은 parameter를 담고 있는 객체
+gfn_initPopup();
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// Popup form 변수
+//////////////////////////////////////////////////////////////////
+
+//
+// Popup 화면 시작
+let categoryDefaultItem = { value: "", content: "전체" };
+
+
+// 카테고리(대) 샘플 데이터
+let lCategoryList = [
+	categoryDefaultItem,
+	
+	{ value: "L01", content: "[01] 대분류 1" },
+	{ value: "L02", content: "[02] 대분류 2" },
+	{ value: "L03", content: "[03] 대분류 3" }
+];
+
+//카테고리(중) 샘플 데이터
+let mCategoryList = [
+	categoryDefaultItem,
+	
+	{ value: "L01M01", content: "[0101] 중분류 1-1" },
+	{ value: "L01M02", content: "[0102] 중분류 1-2" },
+	
+	{ value: "L02M01", content: "[0201] 중분류 2-1" },
+	{ value: "L02M02", content: "[0202] 중분류 2-2" },
+
+	{ value: "L03M01", content: "[0301] 중분류 3-1" },
+	{ value: "L03M02", content: "[0302] 중분류 3-2" }
+];
+
+//카테고리(소) 샘플 데이터
+let sCategoryList = [
+	categoryDefaultItem,
+	
+	{ value: "L01M01S01", content: "[010101] 소분류 1-1-1" },
+	{ value: "L01M01S02", content: "[010102] 소분류 1-1-2" },
+	{ value: "L01M02S01", content: "[010201] 소분류 1-2-1" },
+	{ value: "L01M02S02", content: "[010202] 소분류 1-2-2" },
+	
+	{ value: "L02M01S01", content: "[020101] 소분류 2-1-1" },
+	{ value: "L02M01S02", content: "[020102] 소분류 2-1-2" },
+	{ value: "L02M02S01", content: "[020201] 소분류 2-2-1" },
+	{ value: "L02M02S02", content: "[020202] 소분류 2-2-2" },
+	
+	{ value: "L03M01S01", content: "[030101] 소분류 3-1-1" },
+	{ value: "L03M01S02", content: "[030102] 소분류 3-1-2" },
+	{ value: "L03M02S01", content: "[030201] 소분류 3-2-1" },
+	{ value: "L03M02S02", content: "[030202] 소분류 3-2-2" }
+];
+
+
+// main layout
+let layoutMain;
+
+// form 객체
+let searchForm;
+
+// button bar
+let toolbar;
+
+
+
+//////////////////////////////////////////////////////////////////
+// 초기화 작업
+//////////////////////////////////////////////////////////////////
+$(function() {
+	//
+	// 부모 화면(opener)에서 전달받은 parameter를 담고 있는 변수
+	console.log( popupParameter );
+	
+	
+	//
+	// 1. 기본 layout 구성
+	const layoutConfig = {
+	    type: "line",
+	    
+	    rows: [
+	    		// 첫 번째 줄 영역
+	            { id: "searchFormArea", height: "content" },
+	            
+	            { id: "popupBtnArea", height: "content" }
+	    ]
+	};
+	
+	// layout 생성
+    layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+    
+	
+	//
+	// 2. Form controls 생성
+	
+	//
+	// 2.1. 첫 번째 줄 영역 생성: 기본 Controls
+    searchForm = new dhx.Form(null, {
+        rows: [
+        	// 첫 번째 row: input(text, number, password)
+			{
+                cols: [
+                    // simple text input
+                    FormUtil.getTextInputConfig( { width: 300, label: "코드명", name: "CD_NM", labelWidth: 300 } ),
+                    FormUtil.getButtonConfig( { id: "btn_search", text: "조회" } )
+                ]
+            },
+            
+        	// 두 번째 row: 카테고리(대/중/소) Select controls
+			{
+                cols: [
+                	FormUtil.getSelectConfig( { width: 300, label: "카테고리(대)", name: "CTGR_L", labelWidth: 300 } ),
+                	FormUtil.getSelectConfig(
+                		{ width: 300, label: "카테고리(중)", name: "CTGR_M", labelWidth: 300 },
+                		[ { content: "전체", value: "" } ]
+                	),
+                	FormUtil.getSelectConfig(
+                   		{ width: 300, label: "카테고리(소)", name: "CTGR_S", labelWidth: 300 },
+                   		[ { content: "전체", value: "" } ]
+                   	)
+                ]
+			}
+        ]
+    });
+	
+	
+	//
+	// 2.5. event 처리
+	FormUtil.addEventHandler(searchForm, "btn_search", FormEvent.CLICK, fn_searchBtnClickHandler);
+	FormUtil.addFormEventHandler(searchForm, FormEvent.CHANGE, fn_searchFormChangeHandler);
+	
+	
+	//
+	// popup buttons
+	let popupBtnForm = new dhx.Form(null, {
+		rows: [
+			{
+				align: "center",
+				cols: [
+					FormUtil.getButtonConfig( { id: "btn_ok", text: "OK" } ),
+					FormUtil.getButtonConfig( { id: "btn_cancel", text: "CANCEL" } )
+				]
+			}
+		]
+	});
+	
+	FormUtil.addFormEventHandler(popupBtnForm, FormEvent.CLICK, fn_popupBtnClickHandler);
+	
+	
+	//
+	// 3. 각 영역들을 layout에 추가
+    layoutMain.getCell("searchFormArea").attach(searchForm);
+    layoutMain.getCell("popupBtnArea").attach(popupBtnForm);
+	
+    FormUtil.setFocus(searchForm, "CD_NM");
+	
+	//
+	// 4. 기본 데이터 조회
+	fn_initData();
+	
+	
+	FormUtil.initForms(searchForm);
+});
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// 개발자 정의 function
+//////////////////////////////////////////////////////////////////
+
+/**
+ * 초기 데이터 조회
+ */
+function fn_initData() {
+	//
+	// opner에서 parameter로 넘어온 값 처리
+	if ( gfn_isNotEmpty(popupParameter.SEARCH_KEYWORD) ) {
+		FormUtil.setFormValue(searchForm, "CD_NM", popupParameter.SEARCH_KEYWORD);
+	}
+	
+	//
+    // 초기 카테고리(대) 데이터 조회 
+    fn_searchCategoryList("L", "", "", function(response, status, xhr) {
+    	lCategoryList = response.result;
+    	FormUtil.setSelectOptions(searchForm, "CTGR_L", lCategoryList);
+    	FormUtil.setFormValue(searchForm, "CTGR_L", popupParameter["DEFAULT_CTGR_L"]);
+    });
+}
+
+
+/**
+ * 카테고리 데이터 조회
+ *
+ * @param {String} level L=대, M=중, S=소
+ * @param {String} ctgrCd 선택된 상위 카테고리 코드
+ * @param {String} cdNm 카테고리 코드명
+ * @param {Function} callback 데이터 조회 완료 후 logic을 처리할 callback 함수
+ */
+function fn_searchCategoryList(level, ctgrCd, cdNm, callback) {
+	gfn_ajaxRequest({
+		  method: "POST"
+		, url   : "/sample/sample0001/getCategoryList.do"
+		, data  : {
+			  LEVEL : level
+			, CTGR_CD: ctgrCd
+			, CD_NM: cdNm
+		  }
+		}, 
+		{
+			success: function(response, status, xhr) {
+				if ( gfn_isNotNull(callback) ) {
+					callback.call(this, response, status, xhr);	
+				}
+			}
+		}
+	);
+}
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// event 처리
+//////////////////////////////////////////////////////////////////
+
+/**
+ * 두 번째 Form field에 대한 change event 처리
+ */
+function fn_searchFormChangeHandler(event, data, form) {
+	let ctgrCd = data[1];
+	
+	//
+	// 카테고리(대) 변경
+	if ( data[0] == "CTGR_L" ) {
+		// '전체' 선택
+		if ( gfn_isEmpty(ctgrCd) ) {
+			FormUtil.setSelectOptions(searchForm, "CTGR_M", [ categoryDefaultItem ]);
+			FormUtil.setSelectOptions(searchForm, "CTGR_S", [ categoryDefaultItem ]);
+			
+		} else {
+			fn_searchCategoryList("M", ctgrCd, "", function(response, status, xhr) {
+				FormUtil.setSelectOptions(searchForm, "CTGR_M", response.result);
+				FormUtil.setFormValue(searchForm, "CTGR_M", popupParameter["DEFAULT_CTGR_M"]);
+			});
+			FormUtil.setSelectOptions(searchForm, "CTGR_S", [ categoryDefaultItem ]);
+		}
+		
+	// 카테고리(중) 변경
+	} else if ( data[0] == "CTGR_M" ) {
+		// '전체' 선택
+		if ( gfn_isEmpty(ctgrCd) ) {
+			FormUtil.setSelectOptions(searchForm, "CTGR_S", [ categoryDefaultItem ]);
+			
+		} else {
+			fn_searchCategoryList("S", ctgrCd, "", function(response, status, xhr) {
+				FormUtil.setSelectOptions(searchForm, "CTGR_S", response.result);
+				FormUtil.setFormValue(searchForm, "CTGR_S", popupParameter["DEFAULT_CTGR_S"]);
+			});
+		}
+	}
+}
+
+
+/**
+ * 조회 button에 대한 click event 처리
+ */
+function fn_searchBtnClickHandler(event, form) {
+    //
+    // 초기 카테고리(대) 데이터 조회
+    fn_searchCategoryList("L", "", FormUtil.getFormValue(searchForm, "CD_NM"), function(response, status, xhr) {
+    	lCategoryList = response.result;
+    	FormUtil.setSelectOptions(searchForm, "CTGR_L", lCategoryList);
+    });
+}
+
+
+/**
+ * Popup button에 대한 click event 처리
+ */
+function fn_popupBtnClickHandler(event, data, form) {
+	if ( gfn_isNull(popupCallback) ) {
+		return;
+	}
+
+	
+	//
+	// OK button
+	if ( data[0] == "btn_ok" ) {
+		let catData = {
+			CTGR_L: FormUtil.getFormValue(searchForm, "CTGR_L"),
+			CTGR_M: FormUtil.getFormValue(searchForm, "CTGR_M"),
+			CTGR_S: FormUtil.getFormValue(searchForm, "CTGR_S")
+		}
+ 		popupCallback("OK", catData);
+		
+	//
+	// CANCEL button
+	} else if ( data[0] == "btn_cancel" ) {
+		popupCallback("CANCEL", {value: "CANCEL"});
+	}
+}
+
+</script>
+</html>

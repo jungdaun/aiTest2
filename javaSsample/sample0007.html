@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/dhtmlxAppLayout7 :: layout(~{::script})}"  xmlns:th="http://www.thymeleaf.org">
+
+<script th:src="@{/js/auigrid/includeAUIGrid.js}"></script>
+
+<script>
+
+// main layout
+let layoutMain;
+
+let sfuVault;
+let sfuForm;
+
+let mfuVault;
+let mfuForm;
+let mfuCtrlForm;
+
+let downloadForm;
+
+const IMAGE_EXTS = [ "jpg", "jpeg", "png", "bmp", "gif", "tif", "tiff" ];
+
+const DOC_EXTS = [ "pdf", "ppt", "pptx", "xls", "xlsx", "doc", "docx", "hwp", "hwpx" ];
+
+
+$(function() {
+
+	//////////////////////////////////////////////////////////////////////
+	//
+	// 1. 기본 layout 구성
+	const layoutConfig = {
+	    rows: [
+	    	{
+	    		width: "100%",
+	    		height: "30%",
+	    		header: "Single File Upload",
+	    		cols : [
+	    			{ id: "sfuVaultArea", width: "content", height: "1000%" },
+    			]
+	    	},
+	    	{
+	    		width: "100%",
+	    		height: "50%",
+	    		header: "Multi File Upload",
+	    		cols : [
+	    			{ id: "mfuFormArea", width: "100%", height: "100%" },
+    			]
+	    	},
+	    	{
+	    		width: "100%",
+	    		height: "20%",
+	    		header: "File Download",
+	    		cols : [
+	    			{ id: "downloadFormArea", width: "content", height: "content" }
+    			]
+	    	}
+	    ]
+	};
+	
+	// layout 생성
+    layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+	
+	
+	
+	//////////////////////////////////////////////////////////////////////
+    //
+    // 2. single file upload
+    
+    // 2.1. Single File Upload component 생성
+	sfuVault = FormUtil.createSingleFileUploader("sfuVault", {
+		//allowedExtensions: DOC_EXTS,
+		maxSize: 512000,	// 512 KB = 512,000 byte
+		label: "첨부파일",
+		
+		// upload 완료 후 호출
+		uploadComplete: function(data) {
+			let fileId = sfuVault.getFileId();
+			FormUtil.setFormValue(sfuForm, "FILE_ID", fileId);
+			
+			gfn_alert("업로드되었습니다\n첨부파일번호 = " + fileId);
+		},
+		
+		// 삭제 완료 후 호출
+		removeComplete: function(data) {
+			FormUtil.setFormValue(sfuForm, "FILE_ID", "");
+			gfn_alert("삭제되었습니다.");
+		}
+	});
+    
+    // 2.2. Single file upload form 생성
+    sfuForm = new dhx.Form(null, {
+    	cols: [
+    		{
+    	    	cols: [
+    	    		//
+    	    		// 이 container 영역에 file upload component가 위치함
+    	    		FormUtil.getContainerConfig( { id: "sfuVault" } )
+    	    	]
+    		},
+    		FormUtil.getSpacerConfig( { width: 100 } ),
+    		{
+    	    	rows: [
+    	    		{
+    	    			cols: [
+            	    		FormUtil.getTextInputConfig( { name: "FILE_ID", label: "첨부파일 ID", width: 300, placeholder: "입력 후 조회 Click" } ),
+            	    		FormUtil.getButtonConfig( { id: "btn_search", text: "SEARCH" } )
+    	    			]
+    	    		},
+    	    		{
+    	    			cols: [
+    	    	    		FormUtil.getButtonConfig( { id: "btn_upload", text: "UPLOAD" } ),
+    	    	    		FormUtil.getButtonConfig( { id: "btn_download", text: "DOWNLOAD" } ),
+    	    	    		FormUtil.getButtonConfig( { id: "btn_delete", text: "DELETE" } ),
+    	    	    		FormUtil.getButtonConfig( { id: "btn_fileInfo", text: "FILE INFO" } )
+    	    			]
+    	    		}
+    	    	]
+    		}
+    	]
+    });
+    
+    // 2.3. Form에 Single file upload component 추가
+    FormUtil.attachToContainer(sfuForm, sfuVault, "sfuVault");
+    //sfuForm.getItem("sfuVault").attach(sfuVault);
+    
+    // 2.4. Single file upload form 추가
+    layoutMain.getCell("sfuVaultArea").attach(sfuForm);
+    
+    
+    //
+    // single file uploader events
+    
+    // SFU - upload
+    FormUtil.addEventHandler(sfuForm, "btn_upload", FormEvent.CLICK, function() {
+    	if ( sfuVault.isModified() ) {
+        	gfn_confirm("업로드하시겠습니까?", null, function(result) {
+        		if ( result ) {
+        			sfuVault.upload();
+        		}
+        	});
+        	
+    	} else {
+    		gfn_alert("선택된 파일이 없습니다.");
+    	}
+    });
+    
+    // SFU - search
+    FormUtil.addEventHandler(sfuForm, "btn_search", FormEvent.CLICK, function() {
+    	let fileId = FormUtil.getFormValue(sfuForm, "FILE_ID");
+    	
+    	if ( gfn_isNotEmpty(fileId) ) {
+    		sfuVault.setFileId(fileId);
+    		sfuVault.search();
+    	}
+    });
+    
+    // SFU - download
+    FormUtil.addEventHandler(sfuForm, "btn_download", FormEvent.CLICK, function() {
+ 		if ( sfuVault.isEmpty() ) {
+ 			gfn_alert("다운로드할 파일이 없습니다.");
+ 			
+ 		} else {
+ 			let atchVO = sfuVault.getAtchVO();
+ 			console.log("URL = " + atchVO.downloadURL + atchVO.link);
+ 			
+ 			sfuVault.download();
+ 		}
+    });
+
+    // SFU - 삭제
+    FormUtil.addEventHandler(sfuForm, "btn_delete", FormEvent.CLICK, function() {
+ 		if ( sfuVault.isEmpty() ) {
+ 			gfn_alert("삭제할 파일이 없습니다.");
+ 			
+ 		} else {
+ 	    	gfn_confirm("삭제하시겠습니까?", null, function(result) {
+ 	    		if ( result ) {
+ 	    			sfuVault.remove();
+ 	    		}
+ 	    	});
+ 		}
+    });
+    
+    // SFU - File 정보
+    FormUtil.addEventHandler(sfuForm, "btn_fileInfo", FormEvent.CLICK, function() {
+		console.log( sfuVault.getCurrentFile() );
+		console.log( sfuVault.getAtchVO() );
+	});
+    
+    
+    
+	//////////////////////////////////////////////////////////////////////
+    //
+    // 3. multi file upload
+    
+    // 3.1. Multi File Upload component 생성
+    mfuVault = FormUtil.createMultiFileUploader("mfuVault", {
+		//maxSize: 512000,
+		allowedExtensions: IMAGE_EXTS,
+		preview: false,
+		
+		// upload 완료 후 호출
+		uploadComplete: function(data) {
+			let fileId = mfuVault.getFileId();
+			FormUtil.setFormValue(mfuForm, "MFU_FILE_ID", fileId);
+			
+			gfn_alert("업로드되었습니다\n첨부파일번호 = " + fileId);
+		},
+		
+		// 한 개의 file 삭제 완료 후 호출
+		removeComplete: function(data) {
+			FormUtil.loadImage(mfuForm, "imagePreviewArea", "/images/noimage.png", {width: "430px", height: "300px"});
+		},
+		
+		// 한 개의 file 항목 click 시 호출
+		itemClick: function(file, event) {
+			let previewUrl = "";
+			
+			// upload가 된 상태인 file만 처리
+			if ( file.status == "uploaded" ) {
+				// image file을 다운로드하거나 표시할 수 있는 URL
+				// 아래 두 가지 방법 모두 사용 가능
+				
+				// 1. link property
+				// /attach/downloadFile/{FILE_ID}/{FILE_SEQ}.do
+				previewUrl = file.downloadURL + file.link;
+				
+				// 2. webLink property (주로 SAP, 협력사포털 등 외부에서 호출 시 활용)
+				// http://domain/{WEB_LINK}
+				//previewUrl = gfn_getServerURL() + "/" + file.webLink;
+			} else {
+				previewUrl = "/images/noimage.png";
+			}
+			
+			FormUtil.loadImage(mfuForm, "imagePreviewArea", previewUrl, {width: "430px", height: "300px"});
+		}
+    });
+    
+ 	// 3.2. Multi file upload form 생성
+    mfuForm = new dhx.Form(null, {
+    	cols: [
+    		{
+    			cols: [
+    				FormUtil.getContainerConfig( { id: "mfuVault", width: 500 } )
+    			]
+    		},
+    		{
+    			rows: [
+   	    	    	{
+   	    	    		cols: [
+    	    	    		FormUtil.getTextInputConfig( { name: "MFU_FILE_ID", label: "첨부파일 ID", width: 300, placeholder: "입력 후 조회 Click" } ),
+    	    	    		FormUtil.getButtonConfig( { id: "btn_search", text: "SEARCH" } )
+    	    	    	]
+   	    	    	},
+   	    	    	{
+    	    	    	cols: [
+    	    	    		FormUtil.getButtonConfig( { id: "btn_browse", text: "찾기" } ),
+    	    	    		FormUtil.getButtonConfig( { id: "btn_upload", text: "UPLOAD" } ),
+    	    	    		FormUtil.getButtonConfig( { id: "btn_fileInfo", text: "FILE INFO" } )
+    	    	    	]
+   	    	    	}
+    			]
+    		},
+    		{
+    			cols: [
+    				FormUtil.getContainerConfig({
+    					id: "imagePreviewArea", header: "이미지 미리보기", headerHeight: 35, width: "100%", height: "100%"
+    				})
+    			]
+    		}
+    	]
+    });
+    
+ 	// 3.3. Form에 Multi file upload component 추가
+ 	FormUtil.attachToContainer(mfuForm, mfuVault, "mfuVault");
+    //mfuForm.getItem("mfuVault").attach(mfuVault);
+    
+    layoutMain.getCell("mfuFormArea").attach(mfuForm);
+    
+    
+    //
+    // multi file uploader events
+    
+    // MFU - search
+    FormUtil.addEventHandler(mfuForm, "btn_search", FormEvent.CLICK, function() {
+    	let fileId = FormUtil.getFormValue(mfuForm, "MFU_FILE_ID");
+    	
+    	if ( gfn_isNotEmpty(fileId) ) {
+    		mfuVault.setFileId(fileId);
+    		mfuVault.search();
+    	}
+    });
+    
+    // MFU - browse
+    FormUtil.addEventHandler(mfuForm, "btn_browse", FormEvent.CLICK, function() {
+   		mfuVault.browse();
+    });
+    
+    // MFU - upload
+    FormUtil.addEventHandler(mfuForm, "btn_upload", FormEvent.CLICK, function() {
+    	if ( mfuVault.isModified() ) {
+        	gfn_confirm("업로드하시겠습니까?", null, function(result) {
+        		if ( result ) {
+        			mfuVault.upload();
+        		}
+        	});
+        	
+    	} else {
+    		gfn_alert("선택된 파일이 없습니다.");
+    	}
+    });
+    
+    // MFU - File 정보
+    FormUtil.addEventHandler(mfuForm, "btn_fileInfo", FormEvent.CLICK, function() {
+		console.log( mfuVault.getAtchVOs() );
+	});
+    
+    
+    
+	//////////////////////////////////////////////////////////////////////
+    //
+    // 4. file download form
+    
+	downloadForm = new dhx.Form(null, {
+    	rows: [
+    		{
+    	    	cols: [
+    	    		FormUtil.getTextInputConfig( { name: "DWLD_FILE_ID", label: "첨부파일 ID", width: 300 } ),
+    	    		FormUtil.getDigitConfig( { name: "DWLD_FILE_SEQ", label: "순번", width: 300, value: "1" } ),
+    	    		FormUtil.getSpacerConfig( { width: 100 } ),
+    	    		FormUtil.getButtonConfig( { id: "btn_download", text: "DOWNLOAD" } )
+    	    	]
+    		}
+    	]
+	});
+    
+    layoutMain.getCell("downloadFormArea").attach(downloadForm);
+    
+    
+    
+	//////////////////////////////////////////////////////////////////////
+    //
+    // 5. event handlers
+    
+    //
+    // File Download events
+    FormUtil.addEventHandler(downloadForm, "btn_download", FormEvent.CLICK, function() {
+    	let fileId = FormUtil.getFormValue(downloadForm, "DWLD_FILE_ID");
+    	
+ 		if ( gfn_isEmpty(fileId) ) {
+ 			gfn_alert("첨부파일 ID를 입력하세요.");
+ 			
+ 		} else {
+ 			gfn_downloadFile({
+ 				  fileId: fileId
+ 				, fileSeq: FormUtil.getFormValue(downloadForm, "DWLD_FILE_SEQ")
+ 			});
+ 		}
+    });
+    
+    
+    FormUtil.initForms(sfuForm, mfuForm, downloadForm);
+});
+
+
+function fn_save() {
+	console.log( sfuVault.getFileId() );
+	console.log( sfuVault.getAtchVO() );
+	console.log( mfuVault.getFileId() );
+	console.log( mfuVault.getAtchVOs() );
+}
+
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+</script>
+</html>

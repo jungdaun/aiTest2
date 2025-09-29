@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+
+<html th:replace="~{layout/dhtmlxAppLayout7 :: layout(~{::script})}" xmlns:th="http://www.thymeleaf.org">
+<script th:src="@{/js/auigrid/includeAUIGrid.js}"></script>
+
+
+<!-- AUIPivot.js import -->
+<script th:src="@{/js/auipivot/includeAUIPivot.js}"></script>
+
+<script>
+
+//layout
+var layoutMain;
+
+//layout - a
+var frmSearch;
+
+//layout - b
+var grdMain;
+
+//local variable
+
+var menuNm;
+
+$(function(){
+	
+	/****************************************************************************************************
+	 * 초기화
+	 ****************************************************************************************************/
+	// Layout
+	const layoutConfig = {
+		    type: "line",
+		    rows: [
+		         { id: "frmSearch", height: SearchFormHeight[1], width:"100%", header: "", headerHeight: "" },
+		         { id: "grid", height: "calc(100% - 50px)", header: "메뉴 일자별 매출", headerHeight: "35px", html: '<div id="grdMain" style="width:100%; height: calc(100% - 45px);"></div>' }
+		    ]
+		};
+	    layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+
+		/* Form-조건 */
+	    frmSearch = new dhx.Form(null,{
+	    	css:"searcharea row1",
+	        rows: [
+	                {
+	                    cols: [
+	                        FormUtil.getTextInputConfig({ type: "input", width: "200px", label: "사업장", name: "STORE_CD", labelPosition: "left", labelWidth: "", disabled:true, required: true}),
+	                        FormUtil.getTextInputConfig({ type: "input", width: "180px", label: "", name: "STORE_NAME", labelPosition: "left", labelWidth: "", css:"ml2", hiddenLabel:true}),
+	                        FormUtil.getButtonConfig( { id: "frmBtnStorePop", icon:"dxi dxi-magnify", css:"btn_search" } ),
+	                        FormUtil.getSelectConfig({ width: "200px", label: "식당", name: "CAFE_CD", labelWidth: "100px" }, [{content:'전체', value : ""}] ),
+	                        FormUtil.getDateConfig({ label: "매출일자", name: "START_DATE", width: 220, labelWidth: 300, editable: true, required: true } ),
+	                        { type: "text", label: "", width: "18px", name: "text", labelPosition: "left", labelWidth:0, value: " - ", hiddenLabel: true},                      
+	                        FormUtil.getDateConfig({ label: "", name: "END_DATE", width: 110, labelWidth: 0, editable: true } ),    
+	                    ]
+	                }
+	            ]
+	    });
+	    
+	    // 팝업 버튼 이벤트 함수 생성.    
+	    layoutMain.getCell("frmSearch").attach(frmSearch);    
+		/* Form-조건 */
+		
+		/* Grid-메인 */
+		// 피봇 그리드 속성 설정
+		var pivotProps = {
+// 			  layoutType : "tableCellMerge"	// tree, table, tableCellMerge
+// 			, showSummaryRow : false		// layoutType 을 "table" 또는 "tableCellMerge" 로 설정한 경우, 행의 부분 합계(소계) 출력 여부를 지정
+// 			, showGrandTotalColumn : false	// 열(column) 의 전체 합계 출력 여부를 지정
+// 			, showFooter : false			// 푸터 출력 여부를 지정
+		};
+		
+		// 피봇 필드 속성 설정
+		var fieldProps = {
+			  row : ["STORE_CD", "STORE_NAME", "CAFE_CD", "STORE_CAFE_NAME", "MENU_CD", "MENU_NM"]	// 행 필드
+			, rowEx : ["STORE_CD", "CAFE_CD", "MENU_CD"]			// 피벗에서 제외할 행 필드
+			, rowWidth : {											// 행 필드 width 제한
+				"MENU_NM" : 100
+			}
+			
+			, col : [ "SALE_DATE"]				// 컬럼 필드 (DATE type)
+			// select 해오는 날짜가 SALE_DATE 일 경우 [월, 일] 로 피벗
+		
+// 			, col : ["SALE_MONTH", "SALE_DAY"]						// 컬럼 필드 (String type)
+			
+			, value : [{dataField:"SALE_QTY", operation:"SUM", customLabelText:"수량"}, {dataField:"SALE_TOT", operation:"SUM", customLabelText:"총매출"}]	// 값 필드
+			// dataField : 피벗팅 대상 값 차원 필드명 (필수 지정)
+			// operation : 피벗팅 대상 연산자명 (미 적용시 default : "SUM")
+			// ("SUM", "MIN", "MAX", "COUNT", "AVG", "RATIO", "MULTIPLY", "VARIANCE", "STD_DEVIATION". 기본값 : "SUM")
+			// (합계, 최소값, 최대값, 개수, 평균, 곱, 분산, 표준 편차)
+			// formatString : 피벗팅 연산 후 출력시킬 숫자 포맷 형식 지정 (default: "#,##0")
+			// customLabelText : 값 차원의 이름 사용자 정의 텍스트, (default - 연산자 : dataField)
+
+// 			, filter : ["COLOR"]									// 옵션필터 필드 (피벗팅에서 추가로 필터 메뉴 구성)
+
+			, dateType : "SALE_DATE"								// 데이터 중 날짜 필드를 명시하여 연, 반기, 분기 등으로 나눠서 표시하도록 지시 (DATE Type만 가능)
+			// 연: _YEAR, 반기: _HALF, 분기: _QTR, 월: _MONTH - 현재 화면에서는 col 필드에서 SALE_DATE_MONTH 사용
+			
+// 			, rowFormat : [{dataField : "TOTAL", formatString : "#,##0"}]	// 행 필드 값이 날짜/숫자 형식일 경우 Format
+			, colFormat : [{dataField : "SALE_DATE", formatString : "dd일"}]	// 컬럼 필드 값이 날짜/숫자 형식일 경우 Format (yyyy-mm-dd)
+			// layoutType이 "table" 또는 "tableCellMerge" 일 경우 사용 가능
+			
+			, alias : {		// 필드명 설정 (미설정 시 컬럼명으로 표시)
+		 		"STORE_NAME" : "사업장명",
+		 		"STORE_CAFE_NAME" : "식당명",
+		 		"MENU_NM" : "품목명",
+		 		"SALE_DATE_MONTH" : "월",
+		 		"SALE_DATE" : "일",
+		 		"SALE_QTY" : "수량",
+		 		"SALE_TOT" : "총매출",
+		 	}
+			
+// 			, sort : [{dataField : "SALE_DATE_MONTH", sortType : -1}, {dataField:"SALE_DATE", sortType : -1}]	// 순서 (1: 오름차순 / -1: 내림차순)
+			// 자동 오름 차순 출력을 사용하지 않으려면 추가
+			// pivotProps = {displayAutoAscending : false}; (자동 설정)
+			
+		};
+		
+	    grdMain = AUIPivotUtil.create("#grdMain", pivotProps, fieldProps);
+	    
+		/* Grid-메인 */
+
+
+		/****************************************************************************************************
+		 * 이벤트 생성
+		 ****************************************************************************************************/
+	    // 코드/명/팝업 이벤트 함수 생성 
+	    //formId, CodeId, NameId, InputEvent, PopupEventBtnId, PopupEvent    
+	    fn_s_ajaxCodeNameEvent(frmSearch, "STORE_CD"         ,"STORE_NAME"         ,"fn_storeInput"        ,"frmBtnStorePop"        ,"fn_storePopupOpen"      );
+
+	    //초기화
+	    FormUtil.initForms(frmSearch);
+	
+});
+
+//조회
+function fn_search() {
+	
+	var postParam = FormUtil.getFormValues(frmSearch);
+	
+	fn_ajaxGetAUIPivot({
+        gridName    : grdMain
+       ,postParam   : postParam
+       ,type        : "POST"
+       ,url         : "/sample/sample0008/selectSample0008.do"
+       ,success     : function(responseData) {
+            console.log(":success...");
+       }
+       ,fail        : function() {
+            console.log(":fail...")
+       }
+       ,complete    : function(data) {
+            console.log(":complete...")
+       }
+    });
+	
+}
+
+/**
+* 초기 데이터 조회
+*/
+function fn_initData(gv_menuGbn) {
+}
+/**
+ * 사업장 코드/명 데이터 처리 시작
+ */
+ 
+/*
+ * 사업장 코드 입력 및 팝업 호출시 필요한 파라메타 정의
+ */
+function fn_storeParamSet(){
+
+    // 기존 배열에 파라메타 전달 방식을 객체로 변경.
+    var searchParam = new Object();
+    
+    searchParam.paramPopupId        = "SALCOM0040_P01";
+    searchParam.paramPopupTitle     = "사업장검색";
+    searchParam.paramPopupUrl       = "/com/SALCOM0040_P01/init.do";
+    searchParam.paramTrUrl          = "/com/Salcom0040/getStoreList.do";
+    searchParam.paramCodeCallBack   = "fn_storeInputCallBack";
+    searchParam.paramPopupCallBack  = "fn_storePopupCallBack";
+    searchParam.paramInputCode      = "STORE_CD";
+    searchParam.paramInputName      = "STORE_NAME";
+    searchParam.paramMenuGbn        = gv_menuGbn                                                         //화면구분(C:공통, H:본사, S:사업장, A:전체)    
+    searchParam.paramVal            = { "STORE_CD"     : FormUtil.getFormValue(frmSearch,"STORE_NAME")
+    }
+    //searchParam.paramPopupWidth    = ""                                                                 // 팝업너비
+    //searchParam.paramPopupHeight   = ""                                                                 // 팝업높이    
+    //searchParam.paramMultiYn       = ""                                                                 //멀티선택여부 ( 멀티 :Y, 싱글:N, Default "N")
+    //searchParam.paramPopupOpenYn   = "Y"                                                                //Name 입력 후 N개 OR 데이터가 없는 경우 팝업 호출 여부
+    
+    return searchParam;
+}
+
+/*
+ * 사업장 팝업 호출 event
+ */
+function fn_storePopupOpen(){
+    
+    fn_s_ajaxGetNamePopup(frmSearch,fn_storeParamSet());
+}
+
+/*
+ * 사업장 코드 값 입력시 event
+ */
+function fn_storeInput(){
+    
+    fn_s_ajaxGetName(frmSearch,fn_storeParamSet());
+}
+
+
+/*
+ * 사업장 코드값 입력 후 이벤트가 필요할 경우
+ */
+ function fn_storeInputCallBack($gv_responseData){
+        
+    //식당 셀렉트박스 셋팅
+     fn_setCafeSelectBox($gv_responseData[0].STORE_CD);      
+        
+    }
+
+/*
+ * 사업장 팝업 선택 후 이벤트가 필요할 경우
+ */
+function fn_storePopupCallBack(action, data){
+
+    gv_callbackData = data; 
+    
+    if ( action == "CANCEL" ) {
+        
+        // 팝업 닫기
+        new Function(' return '+ gv_callbackData.paramPopupId + '.close(); ')();   
+    
+    } else if ( action == "OK" ) {
+
+        FormUtil.setFormValue(frmSearch,"STORE_CD"   ,data[0].item.STORE_CD);
+        FormUtil.setFormValue(frmSearch,"STORE_NAME" ,data[0].item.STORE_NAME);
+
+        // 선택 후 팝업 닫기
+        new Function(' return '+ gv_callbackData.paramPopupId + '.close(); ')();
+        
+        //식당 셀렉트박스 셋팅
+        fn_setCafeSelectBox($gv_responseData[0].STORE_CD);    
+        
+    }   
+    
+} 
+ 
+/**
+ * 사업장 코드/명 데이터 처리 종료
+ */
+
+/**
+ *  사업장코드에 따른 식당 셀렉트박스 셋팅
+ */
+function fn_setCafeSelectBox(storeCd){
+    var postParam = new Object();
+    postParam.sqlid = "dsBizCafe:Common.selectBizCafe:A";
+    postParam.STORE_CD = storeCd;
+       
+    fn_s_ajaxGetDsForCombo({
+        postParam : postParam,
+        async:false,
+        success : function(responseData) {
+            FormUtil.setSelectOptions(frmSearch, "CAFE_CD", responseData.dsBizCafe.options);
+        }
+    });  
+}
+
+
+/**
+ * 엑셀
+ */
+function fn_excel() {
+	// 엑셀 헤더
+	menuNm = "그리드_Pivot";
+	gfn_exportPivotAsXlsx(menuNm, grdMain);
+}
+
+</script>
+</html>

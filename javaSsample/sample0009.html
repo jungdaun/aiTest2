@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+
+<html th:replace="~{layout/dhtmlxAppLayout7 :: layout(~{::script})}" xmlns:th="http://www.thymeleaf.org">
+<script th:src="@{/js/auigrid/includeAUIGrid.js}"></script>
+
+<script type="text/javascript" th:inline="javascript">
+
+// 전체 레이아웃 (tab - frmSearch - Content)
+var layoutMain;
+var tabbar;
+
+// Content 레이아웃
+var layoutSub1;
+var layoutSub2;
+var layoutSub3;
+var layoutSub4;
+
+// 검색조건
+var frmSearch1;
+var frmSearch2;
+var frmSearch3;
+
+// Grid
+var grdMain1;
+var grdMain2;
+var grdMain3;
+var grdMain4;
+var grdMain5;
+var grdMain6;
+var grdMain7;
+var grdMain8;
+var grdMain9;
+var grdMain0;
+
+
+$(function(){
+
+	/****************************************************************************************************
+	 * 초기화
+	 ****************************************************************************************************/
+	// Layout
+	const layoutConfig = {
+		type: "line",
+		rows: [
+			 { id: "tabArea", height: "content", header: "", headerHeight: "" }
+			,{ id: "frmSearch", height: SearchFormHeight[1], width:"100%", header: "", headerHeight: "" }
+			// Content 레이아웃 형태 갯수만큼 만든다 (내부에 Form이 들어가 있는 경우나, 그리드 개수가 다를 경우)
+			,{ id: "frmContent1", height: "calc(100% - 50px)", width:"100%", header: "", headerHeight: "" }
+			,{ id: "frmContent2", height: "calc(100% - 50px)", width:"100%", header: "", headerHeight: "" }
+			,{ id: "frmContent3", height: "calc(100% - 50px)", width:"100%", header: "", headerHeight: "" }
+			,{ id: "frmContent4", height: "calc(100% - 50px)", width:"100%", header: "", headerHeight: "" }
+// 	        ,{ id: "grid", height: "calc(100% - 50px)", html: '<div id="grdMain1" style="width:100%; height: calc(100% - 45px);"></div><div id="grdMain2" style="width:100%; height: calc(100% - 45px);"></div><div id="grdMain3" style="width:100%; height: calc(100% - 45px);"></div>' }
+		]
+	};
+	layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+	
+	
+	//
+	// Tab 생성
+	tabbar = FormUtil.createTabbar(null, {
+		mode: "top",
+		noContent: true,	// Tab 형식 버튼만 사용 (dhtmlx tab 내에서 AUIGrid 호출 시 show/hide 이슈)
+		//tabAutoWidth: true,
+		tabWidth: "130px",	// 각자 지정도 가능
+		views: [
+			 { id: "tabView1", tab: "TAB1 (1C)" }
+			,{ id: "tabView2", tab: "TAB2 (1C)" }
+			,{ id: "tabView3", tab: "TAB3 (2E)" }
+			,{ id: "tabView4", tab: "TAB4 (2U)" }
+			,{ id: "tabView5", tab: "TAB5 (1C)" }
+			,{ id: "tabView6", tab: "TAB6 (3L)" }
+		]
+	});
+	layoutMain.getCell("tabArea").attach(tabbar);
+	
+	
+	//
+	// 그리드 전체 (1C - Tab1, Tab2, Tab5)
+	const subLayoutConfig1 = {
+		type: "line",
+		rows: [
+			// 같은 형태의 그리드는 div영역으로 그려놓고 탭 호출 시 display 처리
+			{ id: "grid1", height: "calc(100% - 50px)", html: '<div id="grdMain1" style="width:100%; height: calc(100% - 45px);"></div><div id="grdMain2" style="width:100%; height: calc(100% - 45px);"></div><div id="grdMain7" style="width:100%; height: calc(100% - 45px);"></div>' }
+		]
+	}
+	layoutSub1 = new dhx.Layout("subObj1", subLayoutConfig1);
+	layoutMain.getCell("frmContent1").attach(layoutSub1);
+	
+	//
+	// 그리드 2개 (2E - Tab3)
+	const subLayoutConfig2 = {
+		type: "line",
+		rows: [
+			 { id: "grid3", height: "calc(50% - 50px)", html: '<div id="grdMain3" style="width: 100%; height: calc(100% - 45px);"></div>' }
+			,{ id: "grid4", height: "calc(50% - 50px)", html: '<div id="grdMain4" style="width: 100%; height: calc(100% - 45px);"></div>' }
+		]
+	}
+	layoutSub2 = new dhx.Layout("subObj2", subLayoutConfig2);
+	layoutMain.getCell("frmContent2").attach(layoutSub2);
+	
+	//
+	// 그리드 2개 (2U - Tab4)
+	const subLayoutConfig3 = {
+		type: "line",
+		cols: [
+			 { id: "grid5", height: "calc(100% - 50px)", html: '<div id="grdMain5" style="width: 80%; height: calc(100% - 45px);"></div>' }
+			,{ id: "grid6", height: "calc(100% - 50px)", html: '<div id="grdMain6" style="width: 80%; height: calc(100% - 45px);"></div>' }
+		]
+	}
+	layoutSub3 = new dhx.Layout("subObj3", subLayoutConfig3);
+	layoutMain.getCell("frmContent3").attach(layoutSub3);
+	
+	//
+	// 그리드 3개 (3L - Tab6)
+	const subLayoutConfig4 = {
+		type: "line",
+		cols: [
+			 { id: "grid8", height: "calc(100% - 50px)", html: '<div id="grdMain8" style="width:100%; height: calc(100% - 45px);"></div>' }
+			,{
+				rows: [
+					 { id: "grid9", height: "calc(50% - 50px)", html: '<div id="grdMain9" style="width:100%; height: calc(100% - 45px);"></div>' }
+					,{ id: "grid0", height: "calc(50% - 50px)", html: '<div id="grdMain0" style="width:100%; height: calc(100% - 45px);"></div>' }
+				]
+			 }
+		]
+	}
+	layoutSub4 = new dhx.Layout("subObj4", subLayoutConfig4);
+	layoutMain.getCell("frmContent4").attach(layoutSub4);
+	
+	
+	//
+	// 검색조건 Form
+	frmSearch1 = new dhx.Form(null,{
+		css:"searcharea row1",
+		rows: [
+				{
+					cols: [
+						FormUtil.getInputConfig({ width: "300px", label: "입력1", name: "TAB_INPUT1" }),
+						FormUtil.getSelectConfig({ width: "200px", label: "선택1", name: "TAB_SELECT1" }, [{content:'전체', value : ""}] ),
+						FormUtil.getDateConfig({ width: "220px", label: "달력1", name: "TAB_START1", editable: true } ),
+						{ type: "text", label: "", width: "18px", name: "text", value: " - "},
+						FormUtil.getDateConfig({ width: "110px", label: "", name: "TAB_END1", editable: true } )
+					]
+				}
+			]
+	});
+	
+	frmSearch2 = new dhx.Form(null,{
+		css:"searcharea row1",
+		rows: [
+				{
+					cols: [
+						FormUtil.getInputConfig({ width: "300px", label: "입력2-1", name: "TAB_INPUT21" }),
+						FormUtil.getInputConfig({ width: "300px", label: "입력2-2", name: "TAB_INPUT22" }),
+						FormUtil.getSelectConfig({ width: "200px", label: "선택2", name: "TAB_SELECT2" }, [{content:'전체', value : ""}] ),
+					]
+				}
+			]
+	});
+	
+	frmSearch3 = new dhx.Form(null,{
+		css:"searcharea row1",
+		rows: [
+				{
+					cols: [
+						FormUtil.getInputConfig({ width: "500px", label: "입력3", name: "TAB_INPUT3" }),
+					]
+				}
+			]
+	});
+	
+// 	layoutMain.getCell("frmSearch").attach(frmSearch1);	// 첫번째 탭 검색조건
+	
+	
+	//
+	// Grid 생성
+	let mainProps = {
+		
+	};
+	
+	mainColumnLayout1 = [
+		 { dataField: "VDI_NO", headerText: "VDI NO", width: 120 }
+		,{ dataField: "VDI_DOMAIN", headerText: "VDI 도메인" }
+		,{ dataField: "VDI_IP", headerText: "VDI IP" }
+		,{ dataField: "VDI_DESC", headerText: "비고", width: 120 }
+		,{ dataField: "SORT_SEQ", headerText: "정렬", width: 120 }
+		,{ dataField: "USE_YN", headerText: "사용유무", width: 120 }
+	];
+	grdMain1 = AUIGridUtil.create( "#grdMain1", mainColumnLayout1, mainProps );
+	
+	mainColumnLayout2 = [
+		 { dataField: "A1", headerText: "A1", width: 120 }
+		,{ dataField: "A2", headerText: "A2", width: 120 }
+		,{ dataField: "A3", headerText: "A3" }
+		,{ dataField: "A4", headerText: "A4", width: 120 }
+		,{ dataField: "A5", headerText: "A5", width: 120 }
+		,{ dataField: "A6", headerText: "A6", width: 120 }
+	];
+	grdMain2 = AUIGridUtil.create( "#grdMain2", mainColumnLayout2, mainProps );
+	grdMain3 = AUIGridUtil.create( "#grdMain3", mainColumnLayout2, mainProps );
+	grdMain5 = AUIGridUtil.create( "#grdMain5", mainColumnLayout2, mainProps );
+	grdMain8 = AUIGridUtil.create( "#grdMain8", mainColumnLayout2, mainProps );
+	
+	mainColumnLayout3 = [
+		 { dataField: "B1", headerText: "B1", width: 120 }
+		,{ dataField: "B2", headerText: "B2", width: 120 }
+		,{ dataField: "B3", headerText: "B3" }
+		,{ dataField: "B4", headerText: "B4", width: 120 }
+		,{ dataField: "B5", headerText: "B5", width: 120 }
+		,{ dataField: "B6", headerText: "B6", width: 120 }
+	];
+	grdMain4 = AUIGridUtil.create( "#grdMain4", mainColumnLayout3, mainProps );
+	grdMain6 = AUIGridUtil.create( "#grdMain6", mainColumnLayout3, mainProps );
+	grdMain7 = AUIGridUtil.create( "#grdMain7", mainColumnLayout3, mainProps );
+	grdMain9 = AUIGridUtil.create( "#grdMain9", mainColumnLayout3, mainProps );
+	
+	mainColumnLayout4 = [
+		 { dataField: "C1", headerText: "C1", width: 120 }
+		,{ dataField: "C2", headerText: "C2", width: 120 }
+		,{ dataField: "C3", headerText: "C3" }
+		,{ dataField: "C4", headerText: "C4", width: 120 }
+		,{ dataField: "C5", headerText: "C5", width: 120 }
+		,{ dataField: "C6", headerText: "C6", width: 120 }
+	];
+	grdMain0 = AUIGridUtil.create( "#grdMain0", mainColumnLayout4, mainProps );
+	
+	
+	// tab1 클릭
+	fn_tab1();
+	
+	tabbar.events.on("change", function() {
+		if(tabbar.getActive() == "tabView1") {
+			fn_tab1();
+		} else if(tabbar.getActive() == "tabView2") {
+			fn_tab2();
+		} else if(tabbar.getActive() == "tabView3") {
+			fn_tab3();
+		} else if(tabbar.getActive() == "tabView4") {
+			fn_tab4();
+		} else if(tabbar.getActive() == "tabView5") {
+			fn_tab5();
+		} else if(tabbar.getActive() == "tabView6") {
+			fn_tab6();
+		}
+	});
+
+});
+
+
+// 조회
+function fn_search() {
+	if(FormUtil.validateForm(frmSearch1)) {
+		var postParam = FormUtil.getFormValues(frmSearch1);
+		
+		gfn_ajaxGetAUIGrid({
+			gridName    : grdMain1
+		  , postParam   : postParam
+		  , type        : "POST"
+		  , url         : "/template/template0001/getTemplate0001"
+		  , success     : function(responseData) {
+				console.log(":success...");
+			}
+		  , fail        : function() {
+				console.log(":fail...")
+			}
+		  , complete    : function(data) {
+				console.log(":complete...")
+			}
+		});
+	}
+}
+
+// tab 클릭
+// frmContent1 - display 처리
+function fn_tab1() {
+    $("#grdMain1").css("display", "block");
+	$("#grdMain2").css("display", "none");
+	$("#grdMain7").css("display", "none");
+	layoutMain.getCell("frmSearch").attach(frmSearch1);
+	FormUtil.initForms(frmSearch1);
+	
+	// show/hide 문제로 expand/collapse 사용
+	layoutMain.getCell("frmContent1").expand();
+    layoutMain.getCell("frmContent2").collapse();
+    layoutMain.getCell("frmContent3").collapse();
+    layoutMain.getCell("frmContent4").collapse();
+}
+
+function fn_tab2() {
+	$("#grdMain1").css("display", "none");
+    $("#grdMain2").css("display", "block");
+    $("#grdMain7").css("display", "none");
+    layoutMain.getCell("frmSearch").attach(frmSearch2);
+    layoutMain.getCell("frmContent1").expand();
+    layoutMain.getCell("frmContent2").collapse();
+    layoutMain.getCell("frmContent3").collapse();
+    layoutMain.getCell("frmContent4").collapse();
+}
+
+function fn_tab5() {
+	$("#grdMain1").css("display", "none");
+    $("#grdMain2").css("display", "none");
+    $("#grdMain7").css("display", "block");
+    layoutMain.getCell("frmSearch").attach(frmSearch2);
+    layoutMain.getCell("frmContent1").expand();
+    layoutMain.getCell("frmContent2").collapse();
+    layoutMain.getCell("frmContent3").collapse();
+    layoutMain.getCell("frmContent4").collapse();
+}
+
+//
+// frmContent2
+function fn_tab3() {
+    layoutMain.getCell("frmSearch").attach(frmSearch3);
+    layoutMain.getCell("frmContent1").collapse();
+    layoutMain.getCell("frmContent2").expand();
+    layoutMain.getCell("frmContent3").collapse();
+    layoutMain.getCell("frmContent4").collapse();
+}
+
+//
+// frmContent3
+function fn_tab4() {
+    layoutMain.getCell("frmSearch").attach(frmSearch1);
+    FormUtil.initForms(frmSearch1);
+    layoutMain.getCell("frmContent1").collapse();
+    layoutMain.getCell("frmContent2").collapse();
+    layoutMain.getCell("frmContent3").expand();
+    layoutMain.getCell("frmContent4").collapse();
+}
+
+//
+// frmContent4
+function fn_tab6() {
+    layoutMain.getCell("frmSearch").attach(frmSearch3);
+    layoutMain.getCell("frmContent1").collapse();
+    layoutMain.getCell("frmContent2").collapse();
+    layoutMain.getCell("frmContent3").collapse();
+    layoutMain.getCell("frmContent4").expand();
+}
+
+</script>
+</html>

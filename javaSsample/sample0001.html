@@ -1,0 +1,1686 @@
+<!DOCTYPE html>
+
+<!-- 
+	기본 컴포넌트
+		- 기본 생성 로직
+		- 기본 API script를 이용한 개발
+		- 기본 Form controls
+			- Text input
+			- Select
+				- 하드코딩 데이터 사용
+				- 공통코드 데이터 조회
+			- 일자, 년월, 년도
+			- Checkbox
+			- Radio button
+		- Change event handling
+		- 대/중/소 Select
+		- 주소 검색
+		 
+	@author sklee21
+ -->
+
+<html th:replace="~{layout/dhtmlxAppLayout7 :: layout(~{::script})}"  xmlns:th="http://www.thymeleaf.org">
+
+<!-- 주소 검색 사용 시 반드시 지정 -->
+<script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js"></script>
+
+<script>
+//////////////////////////////////////////////////////////////////
+// Form 변수
+//////////////////////////////////////////////////////////////////
+let categoryDefaultItem = { value: "", content: "전체" };
+
+
+// 카테고리(대) 샘플 데이터
+let lCategoryList = [
+	categoryDefaultItem,
+	
+	{ value: "L01", content: "[01] 대분류 1" },
+	{ value: "L02", content: "[02] 대분류 2" },
+	{ value: "L03", content: "[03] 대분류 3" }
+];
+
+//카테고리(중) 샘플 데이터
+let mCategoryList = [
+	categoryDefaultItem,
+	
+	{ value: "L01M01", content: "[0101] 중분류 1-1" },
+	{ value: "L01M02", content: "[0102] 중분류 1-2" },
+	
+	{ value: "L02M01", content: "[0201] 중분류 2-1" },
+	{ value: "L02M02", content: "[0202] 중분류 2-2" },
+
+	{ value: "L03M01", content: "[0301] 중분류 3-1" },
+	{ value: "L03M02", content: "[0302] 중분류 3-2" }
+];
+
+//카테고리(소) 샘플 데이터
+let sCategoryList = [
+	categoryDefaultItem,
+	
+	{ value: "L01M01S01", content: "[010101] 소분류 1-1-1" },
+	{ value: "L01M01S02", content: "[010102] 소분류 1-1-2" },
+	{ value: "L01M02S01", content: "[010201] 소분류 1-2-1" },
+	{ value: "L01M02S02", content: "[010202] 소분류 1-2-2" },
+	
+	{ value: "L02M01S01", content: "[020101] 소분류 2-1-1" },
+	{ value: "L02M01S02", content: "[020102] 소분류 2-1-2" },
+	{ value: "L02M02S01", content: "[020201] 소분류 2-2-1" },
+	{ value: "L02M02S02", content: "[020202] 소분류 2-2-2" },
+	
+	{ value: "L03M01S01", content: "[030101] 소분류 3-1-1" },
+	{ value: "L03M01S02", content: "[030102] 소분류 3-1-2" },
+	{ value: "L03M02S01", content: "[030201] 소분류 3-2-1" },
+	{ value: "L03M02S02", content: "[030202] 소분류 3-2-2" }
+];
+
+//카테고리(대)2 샘플 데이터
+let lCategoryList2;
+
+//카테고리(대)3 샘플 데이터
+let lCategoryList3 = [
+	categoryDefaultItem,
+	
+	{ value: "L_DATE", content: "[01] 일자" },
+	{ value: "L_MONTH", content: "[02] 년월" },
+	{ value: "L_YEAR", content: "[03] 년도" },
+];
+
+// SAP I/F WSDL 목록
+let sapIfWsdlList = [
+	{ value: "LE003_WMS", content: "LE003_WMS" },
+	{ value: "LE004_WMS", content: "LE004_WMS" },
+	{ value: "LE005_WMS", content: "LE005_WMS" },
+	{ value: "LE007_WMS", content: "LE007_WMS" },
+	{ value: "LE012_WMS", content: "LE012_WMS" },
+	{ value: "LE014_WMS", content: "LE014_WMS" },
+	{ value: "LE015_WMS", content: "LE015_WMS" },
+	{ value: "LE016_WMS", content: "LE016_WMS" },
+	{ value: "LEG027_WMS", content: "LEG027_WMS" },
+	{ value: "LEG037_WMS", content: "LEG037_WMS" },
+	{ value: "LEG038_WMS", content: "LEG038_WMS" },
+	{ value: "LEG050_WMS", content: "LEG050_WMS" },
+	{ value: "SD007_WMS", content: "SD007_WMS" },
+	{ value: "SD009_WMS", content: "SD009_WMS" },
+	{ value: "SD010_WMS", content: "SD010_WMS" },
+	{ value: "SD011_WMS", content: "SD011_WMS" },
+	{ value: "SD012_WMS", content: "SD012_WMS" },
+	{ value: "SD013_WMS", content: "SD013_WMS" }
+];
+
+
+// main layout
+let layoutMain;
+
+// Form 객체
+let searchForm;
+let inputForm;
+
+let testForm;
+
+
+//////////////////////////////////////////////////////////////////
+// 초기화 작업
+//////////////////////////////////////////////////////////////////
+$(function() {
+	console.log( "gfn_getServerURL = ", gfn_getServerURL() );
+	//
+	// 0. 공통 button 제어
+	
+	// 특정 기타 button label 변경
+	// 지정 가능 button = [ "ETC1", "ETC2", "ETC3", "ETC4", "ETC5" ]	(대소문자 구분 없음)
+	fn_setCommonButtonLabel("etc1", "OZReport");
+	fn_setCommonButtonLabel("Etc2", "승인");
+	fn_setCommonButtonLabel("ETC3", "마감");
+	fn_setCommonButtonLabel("ETC4", "전송");
+	fn_setCommonButtonLabel("ETC5", "확인");
+	
+	// 특정 기타 button label text 가져오기
+	// 지정 가능 button = [ "ETC1", "ETC2", "ETC3", "ETC4", "ETC5" ]	(대소문자 구분 없음)
+	fn_getCommonButtonLabel("ETC1");
+	
+	// 특정 button enable/disable
+	// 지정 가능 button = [ "SEARCH", "NEW", "DEL", "SAVE", "EXCEL", "PRINT", "ETC1", "ETC2", "ETC3", "ETC4", "ETC5" ]	(대소문자 구분 없음)
+	fn_enableCommonButton("ETC4", false);	// true=enable, false=disable
+	
+
+	
+	
+	//
+	// 1. 기본 layout 구성
+	const layoutConfig = {
+	    type: "line",
+	    
+	    rows: [
+	    		// 첫 번째 줄 영역
+	            { id: "searchFormArea", height: "content", header: "기본 Controls", headerHeight: "35px" }
+	    	
+		    	// 두 번째 줄 영역
+		      , {
+			    	cols: [
+			    	    { id: "inputFormArea", width: "70%", height: "content", header: "응용 Controls", headerHeight: "35px" }
+			    	  , { id: "testFormArea", width: "30%", height: "content", header: "Test", headerHeight: "35px" }
+			      	]
+		    	}
+	    ]
+	};
+	
+	// layout 생성
+    layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+    
+	
+	//
+	// 2. Form controls 생성
+	
+	//
+	// 2.1. 첫 번째 줄 영역 생성: 기본 Controls
+    searchForm = new dhx.Form(null, {
+        rows: [
+        	// 첫 번째 row: input(text, number, password)
+			{
+                cols: [
+                    // simple text input
+                    FormUtil.getTextInputConfig( { width: 300, label: "코드명", name: "CD_NM", labelWidth: 300, min: 2, max: 20, required: true } ),
+                    
+                 	// simple number input
+                    FormUtil.getNumberConfig( { width: 300, label: "코드길이", name: "CD_LEN", labelWidth: 300, min: 10, max: 99999} ),
+                    
+                    FormUtil.getDigitConfig( { width: 300, label: "생년월일", name: "BIRTH_YMD", labelWidth: 300, min: 8, max: 8 } ),
+                    
+                 	// simple password input
+                    FormUtil.getPasswordConfig( { width: 300, label: "비밀번호", name: "PSWD", labelWidth: 300, min: 8 } ),
+                    
+                    // button
+                    FormUtil.getButtonConfig( { id: "btn_alert", text: "Alert" } ),
+                    FormUtil.getButtonConfig( { id: "btn_confirm", text: "Confirm" } )
+                ]
+            },
+            
+        	// 두 번째 row: select, combobox
+			{
+                cols: [
+                	// select
+                	// with 하드코딩 데이터
+                	FormUtil.getSelectConfig(
+                		  { width: 300, label: "코드선택", name: "CODE", labelWidth: 300 }
+                		, [ { content: "전체", value: "" }, { content: "A 코드", value: "A" }, { content: "B 코드", value: "B" } ]
+                	),
+                	
+                    // with 공통코드 데이터
+                	FormUtil.getSelectConfig(
+                		  { width: 300, label: "공통코드", name: "ENV_TYPE", labelWidth: 300, required: true }
+                	),
+                	
+                	// combobox(multi-selection)
+                	FormUtil.getComboboxConfig(
+                		{ width: 300, label: "멀티선택", name: "MULTI", multiselection: true },
+                		[ { id: "A", value: "항목A" }, { id: "B", value: "항목B" }, { id: "C", value: "항목C" } ]
+                	)
+                ]
+            },
+            
+            // 세 번째 row: date, month, year
+            {
+            	cols: [
+            		// 일자, 년월, 년도
+            		FormUtil.getDateConfig( { label: "일자", name: "DATE", width: 300, labelWidth: 300, required: true } ),
+            		FormUtil.getMonthConfig( { label: "년월", name: "MONTH", width: 300, labelWidth: 300 } ),
+            		FormUtil.getYearConfig( { label: "년도", name: "YEAR", width: 300, labelWidth: 300 } ),
+            		FormUtil.getButtonConfig( { id: "btn_showHide", text: "SHOW/HIDE" } )
+            	]
+            },
+            
+            // 네 번째 row: Checkbox
+            {
+            	cols: [
+            		// 개별 Checkbox
+            		FormUtil.getCheckboxConfig( { name: "USE_YN", label: "사용여부", labelWidth: 80 } ),
+            		
+            		// button
+                    FormUtil.getButtonConfig( { id: "btn_check_yn", text: "Check YN" } ),
+                    FormUtil.getButtonConfig( { id: "btn_check_01", text: "Check 01" } ),
+            		
+            		// Checkbox group(with 하드코딩 데이터)
+            		FormUtil.getCheckboxGroupConfig(
+            			{ name: "NOTI_TYPE", label: "알림방식", width: "content" },
+            			[ { id: "BLT", text: "블라섬톡", checked: true }, { id: "EML", text: "이메일" } ]
+            		),
+            		
+            		// Checkbox group(with 공통코드)
+            		FormUtil.getCheckboxGroupConfig( { name: "USER_TYPE", label: "사용자유형", width: "content" } )
+            	]
+            },
+            
+            // 다섯 번째 row: Radio button
+            {
+            	cols: [
+            		// Radio buttons(with 하드코딩 데이터)
+            		FormUtil.getRadioGroupConfig(
+            			{ name: "CS_TYPE", label: "CS구분" },
+             			[ { text: "Client", value: "1", checked: true }, { text: "Server", value: "2" } ]
+            		),
+            		
+            		// Radio buttons(with 공통코드)
+            		FormUtil.getRadioGroupConfig( { name: "MOBILE_TYPE", label: "모바일구분" } )
+            	]
+            },
+            
+            // 여섯 번째 row: textarea
+            {
+            	rows: [
+            		// Textarea
+            		FormUtil.getTextareaConfig({
+            			width: "80%", height: 120, label: "내용", name: "CONTENT", labelWidth: 300, min: 10, max: 100
+            		})
+            	]
+            },
+            
+            // 일곱 번째 row: <a> link
+            {
+            	cols: [
+            		FormUtil.getLabelConfig({ id: "lblLink", label: "LINK", css: "tar", labelWidth: 110 }),
+            		FormUtil.getHrefConfig({ id: "alink", href: "/etc/sample_basic.xlsx", text: "Download Sample XLSX" })
+            	]
+            }
+        ]
+    });
+	
+	
+	//
+	// 2.3. 첫 번째 줄 영역 event 처리
+	
+	// Form 입력값 변경 시
+	FormUtil.addFormEventHandler(searchForm, FormEvent.CHANGE, fn_searchFormChangeHandler);
+	FormUtil.addFormEventHandler(searchForm, FormEvent.KEYDOWN, function(event, data, formObj) {
+		if ( event.keyCode == Keyboard.ENTER ) {
+			console.log(event);		// KeyboardEvent 객체
+			console.log(data);		// data[0]: KeyboardEvent 객체, data[1]: form item name
+			console.log(formObj);	// 해당 Form 객체(= searchForm)
+		}
+	});
+	
+	// Button click 시
+	// Form event를 통한 처리
+	FormUtil.addFormEventHandler(searchForm, FormEvent.CLICK, fn_searchFormClickHandler);
+	
+	// Form item event를 통한 처리
+	FormUtil.addEventHandler(searchForm, "btn_confirm", FormEvent.CLICK, fn_confirmBtnClickHandler);
+	
+	// Form event를 통한 처리
+	FormUtil.addEventHandler(searchForm, "btn_check_yn", FormEvent.CLICK, fn_checkYnClickHandler);
+	FormUtil.addEventHandler(searchForm, "btn_check_01", FormEvent.CLICK, fn_check01ClickHandler);
+	
+	
+	//
+	// 2.4. 두 번째 줄 영역 생성: 응용 Controls
+    inputForm = new dhx.Form(null, {
+        rows: [
+        	// 첫 번째 row: filtering을 사용한 대/중/소 Select controls
+			{
+                cols: [
+                	FormUtil.getSelectConfig( { width: "230px", label: "카테고리(대)", name: "CTGR_L", labelWidth: "200px" } ),
+                	FormUtil.getSelectConfig(
+                		{ width: "260px", label: "카테고리(중)", name: "CTGR_M", labelWidth: "200px" },
+                		[ { content: "전체", value: "" } ]
+                	),
+                	FormUtil.getSelectConfig(
+                   		{ width: "280px", label: "카테고리(소)", name: "CTGR_S", labelWidth: "200px" },
+                   		[ { content: "전체", value: "" } ]
+                   	),
+                	
+                	FormUtil.getButtonConfig( { id: "btn_categoryInit", text: "초기화" } ),
+                	FormUtil.getButtonConfig( { id: "btn_categoryValues", text: "선택값" } )
+                ]
+            },
+            
+        	// 두 번째 row: DB 데이터 조회를 사용한 대/중/소 Select controls
+			{
+                cols: [
+                	FormUtil.getSelectConfig( { width: "230px", label: "카테고리(대) 2", name: "CTGR_L2", labelWidth: "200px" } ),
+                	FormUtil.getSelectConfig(
+                		{ width: "260px", label: "카테고리(중) 2", name: "CTGR_M2", labelWidth: "200px" },
+                		[ { content: "전체", value: "" } ]
+                	),
+                	FormUtil.getSelectConfig(
+                   		{ width: "280px", label: "카테고리(소) 2", name: "CTGR_S2", labelWidth: "200px" },
+                   		[ { content: "전체", value: "" } ]
+                   	),
+                   	FormUtil.getButtonConfig( { id: "btn_categoryPopup", text: "카테고리 팝업" } )
+                ]
+            },
+            
+         	// 세 번째 row: DB 데이터 조회를 사용한 대/중/소 Select controls
+			{
+                cols: [
+                	FormUtil.getSelectConfig( { width: 300, label: "일자 타입", name: "CTGR_L3", labelWidth: 300 } ),
+                	FormUtil.getDateConfig( { label: "일자", name: "L3_DATE", width: 300, labelWidth: 300, hidden: true } ),
+            		FormUtil.getMonthConfig( { label: "년월", name: "L3_MONTH", width: 300, labelWidth: 300, hidden: true } ),
+            		FormUtil.getYearConfig( { label: "년도", name: "L3_YEAR", width: 300, labelWidth: 300, hidden: true } )
+                ]
+            },
+            
+         	// 4번째 row: 주소 검색 Controls (Daum 주소 검색 API)
+			{	// 우편번호, 검색 버튼
+                cols: [
+                	FormUtil.getTextInputConfig( { width: 150, name: "POST_CD", placeholder: "우편번호" } ),
+                	FormUtil.getButtonConfig( { id: "btn_postCode", text: "우편번호 찾기" } ),
+                	FormUtil.getTextInputConfig( { width: 300, name: "ADDR", placeholder: "선택주소" } ),
+                	FormUtil.getTextInputConfig( { width: 300, name: "DETAIL_ADDR", placeholder: "상세주소" } ),
+                ]
+            },
+            
+            // 5번째 row
+            {
+            	cols: [
+            		FormUtil.getTextInputConfig( { width: 300, name: "ROAD_ADDR", placeholder: "도로명주소" } ),
+                	FormUtil.getTextInputConfig( { width: 300, name: "JIBUN_ADDR", placeholder: "지번주소" } ),
+            	]
+            },
+            
+            // 6번째 row
+            {
+            	cols: [
+            		FormUtil.getTextInputConfig( { width: 150, name: "MENU_CD", placeholder: "메뉴코드", value: "SMPL0051" } ),
+            		FormUtil.getTextInputConfig( { width: 150, name: "PARAM_VAL1", placeholder: "전달값", value: "구분" } ),
+            		FormUtil.getButtonConfig( { id: "btn_openMenu", text: "메뉴열기" } )
+            	]
+            },
+            
+            // 7번째 row
+            {
+            	cols: [
+            		FormUtil.getButtonConfig( { id: "btn_sessionInfo", text: "Session 정보" } ),
+            		FormUtil.getButtonConfig( { id: "btn_officeXpiViewer", text: "전자증빙 Popup" } )
+            	]
+            }
+		]
+    });
+	
+	
+	//
+	// 2.5. event 처리
+	FormUtil.addFormEventHandler(inputForm, FormEvent.CHANGE, fn_inputFormChangeHandler);
+	FormUtil.addEventHandler(inputForm, "btn_categoryInit", FormEvent.CLICK, fn_categoryInitBtnClickHandler);
+	FormUtil.addEventHandler(inputForm, "btn_categoryValues", FormEvent.CLICK, fn_categoryValuesBtnClickHandler);
+	FormUtil.addEventHandler(inputForm, "btn_categoryPopup", FormEvent.CLICK, fn_categoryPopupBtnClickHandler);
+	FormUtil.addEventHandler(inputForm, "btn_postCode", FormEvent.CLICK, fn_postCodeBtnClickHandler);
+	FormUtil.addEventHandler(inputForm, "btn_openMenu", FormEvent.CLICK, function() {
+		let param = { PARAM_VAL1: FormUtil.getFormValue(inputForm, "PARAM_VAL1") };
+		let menuCd = FormUtil.getFormValue(inputForm, "MENU_CD");
+		
+		gfn_openMenu(menuCd, param, {reloadOnReopen: true});
+	});
+	FormUtil.addEventHandler(inputForm, "btn_sessionInfo", FormEvent.CLICK, fn_sessionInfoBtnClickHandler);
+	
+	FormUtil.addEventHandler(inputForm, "btn_officeXpiViewer", FormEvent.CLICK, function() {
+		//
+		// 전자증빙 Viewer popup 표시
+		// URL 등의 정보는 casa-wms.yml에 정의되어 있음
+		
+		// 전자증빙 설정
+		const config = {
+			KEY : "test22",
+			PROJ: "SGFOOD",
+			CORP: "1000",
+			USER: "woonam",
+			MODE: "VIEW",
+			VIEW: "MULTI",
+			POP: "ACTOR",
+			//CALL: "WEB",
+			//WORK: "",
+			//LANG: "KO"
+		};
+		
+		// popup 설정
+		const popupConfig = {
+			//width: 1024,	// 기본이 1024
+			//height: 768	// 기본이 768
+		};
+		
+		// open popup
+		gfn_officeXpiViewer(config, popupConfig);
+	});
+	
+	
+	
+    testForm = new dhx.Form(null, {
+        rows: [
+			{
+                cols: [
+                	FormUtil.getSelectConfig( { width: "250px", label: "SAP I/F WSDL", name: "SAP_IF_WSDL", labelWidth: "200px" } ),
+                    FormUtil.getButtonConfig( { id: "btn_exeSapIfWsdl", text: "실행" } )
+                ]
+            }
+    	]
+    });
+	
+	FormUtil.addEventHandler(testForm, "btn_exeSapIfWsdl", FormEvent.CLICK, fn_exeSapifWsdlClickHandler);
+	
+	
+	//
+	// 3. 각 영역들을 layout에 추가
+    layoutMain.getCell("searchFormArea").attach(searchForm);
+    layoutMain.getCell("inputFormArea").attach(inputForm);
+    layoutMain.getCell("testFormArea").attach(testForm);
+    
+	
+	//
+	// 4. 기본 데이터 조회
+	fn_initData();
+	
+	
+	//
+	// 5. focus 처리
+	FormUtil.setFocus(searchForm, "CD_NM");
+	
+	
+	//
+	// 6. 최종 form control 공통 기능 초기화
+	FormUtil.initForms(searchForm, inputForm, testForm);
+});
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// 공통 button
+//////////////////////////////////////////////////////////////////
+
+/**
+ * 조회
+ */
+function fn_search() {
+    //
+    // 초기 form data
+    let formData = {
+    	  CD_NM: "Development Code"
+    	, CD_LEN: 21
+    	, BIRTH_YMD: "19921028"
+    	, CODE: ""
+    	, ENV_TYPE: ""
+    	, MULTI: ""
+    	, DATE: "2022-06-01"
+    	, MONTH: ""
+    	, YEAR: ""
+    	, USE_YN: ""
+    	, NOTI_TYPE: ""
+    	, USER_TYPE: ""
+    	, CS_TYPE: ""
+    	, MOBILE_TYPE: ""
+    };
+    
+    FormUtil.setFormValues(searchForm, formData);
+}
+
+/**
+ * 추가
+ */
+function fn_new() {
+	gfn_alert("추가 - fn_new()");
+}
+
+/**
+ * 삭제
+ */
+function fn_delete() {
+	gfn_alert("삭제 - fn_delete()");
+}
+
+/**
+ * 저장
+ */
+function fn_save() {
+	if ( FormUtil.validateForm(searchForm) ) {
+		let values = FormUtil.getFormValues(searchForm, {trueValue: "1", falseValue: "0"});
+		console.log( values );
+	}
+}
+
+/**
+ * 엑셀
+ */
+function fn_excel() {
+	gfn_alert("엑셀 - fn_excel()");
+}
+
+/**
+ * 인쇄
+ */
+function fn_print() {
+	gfn_alert("인쇄 - fn_print()");
+}
+
+/**
+ * 기타1(오즈리포트 Viewer 호출)
+ */
+function fn_etc1() {
+	var param = new Object;
+// 	var param = FormUtil.getFormValues(searchForm);	// 조회 조건 (Query 조회 시 필요한 Parameter)
+	
+	param.edtStoreCd = "00226";	// 조회조건 이외의 추가 Parameter 필요 시
+	param.cboCafe = "01";
+	
+	var ozNm = {
+		ozrNm: "sample_report",	// ozr 파일명
+		odiNm: "SALGEN0109_R01"	// odi 파일명
+	};
+	
+	gfn_OzCall(ozNm, param);	// OZReport Viewer 호출
+	
+	
+	// parameter
+	var ozParam = "";
+	ozParam = gfn_OzParam(ozNm, param);
+	
+	console.log("전달되는 파라미터 => " + ozParam);
+}
+
+/**
+ * 기타2(승인)
+ */
+function fn_etc2() {
+	gfn_alert("기타2 - fn_etc2()");
+}
+
+/**
+ * 기타3(마감)
+ */
+function fn_etc3() {
+	gfn_alert("기타2 - fn_etc3()");
+}
+
+/**
+ * 기타4(전송)
+ */
+function fn_etc4() {
+	gfn_alert("기타4 - fn_etc4()");
+}
+
+/**
+ * 기타5(확인)
+ */
+function fn_etc5() {
+	gfn_alert("기타5 - fn_etc5()");
+}
+
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// 개발자 정의 function
+//////////////////////////////////////////////////////////////////
+
+/**
+ * 초기 데이터 조회
+ */
+function fn_initData() {
+	//
+	// Select용 공통코드 데이터 조회
+	// 환경구분코드
+    var postParam = {
+    	// 환경구분코드(데이터명:그룹코드:사용여부:선택|전체)
+		grpcd: "dsEnvType:SY010:Y:S"
+    };
+    
+    fn_s_ajaxGetDsForCombo({
+          postParam: postParam
+        , async    : false
+        , success  : function(responseData) {
+        	FormUtil.setSelectOptions(searchForm, "ENV_TYPE", responseData.dsEnvType.options)
+        	FormUtil.setFormValue(searchForm, "ENV_TYPE", "");
+        }
+    });
+    
+    
+	//
+	// CheckboxGorup용 공통코드 데이터 조회
+	// 환경구분코드
+    postParam.grpcd = "dsUserType:SY011:Y";
+    
+    fn_s_ajaxGetDsForCombo({
+          postParam: postParam
+        , async    : false
+        , success  : function(responseData) {
+        	FormUtil.setCommonCodeToChbGroup(searchForm, "USER_TYPE", responseData.dsUserType.options);
+        	FormUtil.setFormValue(searchForm, "USER_TYPE", {"MSR": true});
+        }
+    });
+    
+    
+	//
+	// RadioGorup용 공통코드 데이터 조회
+	// 환경구분코드
+    postParam.grpcd = "dsMobileType:SY020:Y:A";
+    
+    fn_s_ajaxGetDsForCombo({
+          postParam: postParam
+        , async    : false
+        , success  : function(responseData) {
+         	FormUtil.setCommonCodeToRadioGroup(searchForm, "MOBILE_TYPE", responseData.dsMobileType.options);
+         	FormUtil.setFormValue(searchForm, "MOBILE_TYPE", "IOS");
+        }
+    });
+    
+    
+	//
+	// Combobox용 공통코드 데이터 조회
+	// 권한처리코드
+    postParam.grpcd = "dsErrType:SY006";
+    
+    fn_s_ajaxGetDsForCombo({
+          postParam: postParam
+        , async    : false
+        , success  : function(responseData) {
+        	FormUtil.setCommonCodeToCombobox(searchForm, "MULTI", responseData.dsErrType.options);
+        }
+    });
+    
+    
+    //
+    // 카테고리(대) 데이터 초기화
+    FormUtil.setSelectOptions(inputForm, "CTGR_L", lCategoryList);
+    
+    
+    //
+    // 초기 카테고리(대)2 데이터 조회 
+    fn_searchCategoryList("L", "", function(response, status, xhr) {
+    	lCategoryList2 = response.result;
+    	FormUtil.setSelectOptions(inputForm, "CTGR_L2", lCategoryList2);
+    });
+    
+    
+    //
+    // 초기 카테고리(대)3 데이터 조회 
+    FormUtil.setSelectOptions(inputForm, "CTGR_L3", lCategoryList3);
+    
+    
+    //
+    // SAP I/F WSDL 목록
+    FormUtil.setSelectOptions(testForm, "SAP_IF_WSDL", sapIfWsdlList);
+}
+
+
+/**
+ * 카테고리 데이터 조회
+ *
+ * @param {String} level L=대, M=중, S=소
+ * @param {String} ctgrCd 선택된 상위 카테고리 코드
+ * @param {Function} callback 데이터 조회 완료 후 logic을 처리할 callback 함수
+ */
+function fn_searchCategoryList(level, ctgrCd, callback) {
+	gfn_ajaxRequest({
+		  method: "POST"
+		, url   : "/sample/sample0001/getCategoryList.do"
+		, data  : {
+			  LEVEL : level
+			, CTGR_CD: ctgrCd
+		  }
+		}, 
+		{
+			success: function(response, status, xhr) {
+				if ( gfn_isNotNull(callback) ) {
+					callback.call(this, response, status, xhr);
+				}
+			}
+		}
+	);
+}
+ 
+
+/**
+ * 선택된 SAP I/F WSDL 실행
+ */
+function fn_exeSapIfWsdl(ifId) {
+	let url;
+	let param;
+	
+	//
+	// LE003_WMS
+	if (ifId == "LE003_WMS") {
+		url = "/wms/sapwsdl/le003wms.do";
+		param = {
+			list: [
+				{
+					TRANS_DATE: "20240712",
+					TR_DATE: "20240712",
+					SEQ: "1",
+					MOVE_TYPE: "X",
+					PROD_CODE: "F0102T0102",
+					FROM_CD1: "F01",
+					FROM_CD2: "F02",
+					TO_CD1: "T01",
+					TO_CD2: "T02",
+					TRANS_QTY: "21",
+					PROD_UNIT: "EA",
+					SO_NO: "FT"
+				},
+				{
+					TRANS_DATE: "20240712",
+					TR_DATE: "20240712",
+					SEQ: "2",
+					MOVE_TYPE: "X",
+					PROD_CODE: "F1112T1112",
+					FROM_CD1: "F11",
+					FROM_CD2: "F12",
+					TO_CD1: "T11",
+					TO_CD2: "T12",
+					TRANS_QTY: "11",
+					PROD_UNIT: "EA",
+					SO_NO: "FT"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+	
+	// LE004_WMS
+	} else if (ifId == "LE004_WMS") {
+		url = "/wms/sapwsdl/le004wms.do";
+		param = {
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "154207"
+			},
+			MDOC: "MDOC",
+			MYYYY: "2024"
+		};
+	
+	// LE005_WMS
+	} else if (ifId == "LE005_WMS") {
+		url = "/wms/sapwsdl/le005wms.do";
+		param = {
+			list: [
+				{
+					TRANS_DATE: "20240715",
+					TR_DATE: "20240715",
+					SEQ: "1",
+					MOVE_TYPE: "X",
+					PROD_CODE: "F0102T0102",
+					FROM_CD1: "F01",
+					FROM_CD2: "F02",
+					TO_CD1: "T01",
+					TO_CD2: "T02",
+					TRANS_QTY: "21",
+					PROD_UNIT: "EA",
+					SO_NO: "FT"
+				},
+				{
+					TRANS_DATE: "20240712",
+					TR_DATE: "20240712",
+					SEQ: "2",
+					MOVE_TYPE: "X",
+					PROD_CODE: "F1112T1112",
+					FROM_CD1: "F11",
+					FROM_CD2: "F12",
+					TO_CD1: "T11",
+					TO_CD2: "T12",
+					TRANS_QTY: "11",
+					PROD_UNIT: "EA",
+					SO_NO: "FT"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+	
+	// LE007_WMS
+	} else if (ifId == "LE007_WMS") {
+		url = "/wms/sapwsdl/le007wms.do";
+		param = {
+			list: [
+				{
+					TRANS_DATE: "20240712",
+					TR_DATE: "20240712",
+					PROD_CODE: "F0102T0102",
+					GROUP_ID: "F01",
+					D_ORDER: "T01",
+					D_ORDER_SEC: "T02",
+					TRANS_QTY: "21",
+					QTY_UNIT: "EA",
+					ID_NO: "FT"
+				},
+				{
+					TRANS_DATE: "20240712",
+					TR_DATE: "20240712",
+					PROD_CODE: "F1112T1112",
+					GROUP_ID: "F01",
+					D_ORDER: "T01",
+					D_ORDER_SEC: "T02",
+					TRANS_QTY: "21",
+					QTY_UNIT: "EA",
+					ID_NO: "FT"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+		
+	// LE012_WMS
+	} else if (ifId == "LE012_WMS") {
+		url = "/wms/sapwsdl/le012wms.do";
+		param = {
+			list: [
+				{
+					ZTRTYTR: "2371481273",
+					GRIDOC: "XDFHG",
+					GRINUM: "011",
+					BUDAT: "20240716",
+					MATNR: "21",
+					MENGE4: "X",
+					MEINS: "0",
+					LGORT: "0"
+				},
+				{
+					ZTRTYTR: "3747482323",
+					GRIDOC: "IDUEH",
+					GRINUM: "017",
+					BUDAT: "20240716",
+					MATNR: "11",
+					MENGE4: "X",
+					MEINS: "0",
+					LGORT: "0"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+		
+	// LE014_WMS
+	} else if (ifId == "LE014_WMS") {
+		url = "/wms/sapwsdl/le014wms.do";
+		param = {
+			list: [
+				{
+					EBELN: "739274238",
+					EBELP: "DJJDSJXJX",
+					BUDAT: "20240717",
+					MATNR: "21",
+					MENGE: "11",
+					MEINS: "10",
+					LGORT: "0"
+				},
+				{
+					EBELN: "830340473",
+					EBELP: "JHFUSUDDJ",
+					BUDAT: "20240717",
+					MATNR: "10",
+					MENGE: "11",
+					MEINS: "21",
+					LGORT: "0"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+		
+	// LE015_WMS
+	} else if (ifId == "LE015_WMS") {
+		url = "/wms/sapwsdl/le015wms.do";
+		param = {
+			list: [
+				{
+					BLDAT: "20240717",
+					BUDAT: "20240717",
+					BWART: "10",
+					MATNR: "11",
+					WERKS: "ABC",
+					LGORT: "0",
+					UMWRK: "0",
+					UMLGO: "0",
+					ERFMG: "A2731745127",
+					ERFME: "C2031472378"
+				},
+				{
+					BLDAT: "20240717",
+					BUDAT: "20240717",
+					BWART: "10",
+					MATNR: "11",
+					WERKS: "ABC",
+					LGORT: "0",
+					UMWRK: "0",
+					UMLGO: "0",
+					ERFMG: "B2848492933",
+					ERFME: "A3746724717"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+	
+	// LEG027_WMS
+	} else if (ifId == "LEG027_WMS") {
+		url = "/wms/sapwsdl/leg027wms.do";
+		param = {
+			list: [
+				{
+					BSTKD: "20240716",
+					FENDDT: "20240716",
+					SEQ: "1",
+					SO_NO: "F0102T0102",
+					TIMS: "T01",
+					TYPE: "T02"
+				},
+				{
+					BSTKD: "20240716",
+					FENDDT: "20240716",
+					SEQ: "2",
+					SO_NO: "F0102T0102",
+					TIMS: "T01",
+					TYPE: "T02"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+		
+	// LE016_WMS
+	} else if (ifId == "LE016_WMS") {
+		url = "/wms/sapwsdl/le016wms.do";
+		param = {
+			list: [
+				{
+					BLDAT: "20240717",
+					BUDAT: "20240717",
+					BWART: "10",
+					MATNR: "11",
+					CHARG: "0",
+					WERKS: "ABC",
+					LGORT: "0",
+					UMWRK: "0",
+					UMLGO: "0",
+					ERFMG: "A2731745127",
+					ERFME: "C2031472378"
+				},
+				{
+					BLDAT: "20240717",
+					BUDAT: "20240717",
+					BWART: "10",
+					MATNR: "11",
+					CHARG: "0",
+					WERKS: "ABC",
+					LGORT: "0",
+					UMWRK: "0",
+					UMLGO: "0",
+					ERFMG: "B2848492933",
+					ERFME: "A3746724717"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+		
+	// LEG037_WMS
+	} else if (ifId == "LEG037_WMS") {
+		url = "/wms/sapwsdl/leg037wms.do";
+		param = {
+			list: [
+				{
+					BSTKD: "20240716",
+					STATUS: "S",
+					CENDDT: "20240716",
+					SEQ: "1",
+					SO_NO: "F0102T0102",
+					TIMS: "T01",
+					TYPE: "T02"
+				},
+				{
+					BSTKD: "20240716",
+					STATUS: "S",
+					CENDDT: "20240716",
+					SEQ: "2",
+					SO_NO: "F0102T0102",
+					TIMS: "T01",
+					TYPE: "T02"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+		
+	// LEG038_WMS
+	} else if (ifId == "LEG038_WMS") {
+		url = "/wms/sapwsdl/leg038wms.do";
+		param = {
+			list: [
+				{
+					BSTKD: "20240716",
+					STATUS: "S",
+					DENDDT: "20240716",
+					SEQ: "1",
+					SO_NO: "F0102T0102",
+					CAR_NO: "CAR01",
+					CAR_NO_TYPE: "CH",
+					TRANS_OPER: "010",
+					TRANS_OPER_TEL_NO_ENC: "jdDGiud+idjdw==",
+					CUST_CODE: "AG678",
+					SONGJANG_NO: "95612983401283828777",
+					FENDDT: "20240716",
+					POST_CODE1: "32949",
+					CLIENT_ADDRESS: "마포구 성산동",
+					DLV_ADDRESS: "마포구 서교동",
+					TEL_NO: "01090118314",
+					HP_NO: "02090118314",
+					COMMAND: "TIGER_UPPERCUT",
+					TIMS: "154311",
+					TYPE: "A"
+				},
+				{
+					BSTKD: "20240716",
+					STATUS: "S",
+					DENDDT: "20240716",
+					SEQ: "2",
+					SO_NO: "F0102T0102",
+					CAR_NO: "CAR01",
+					CAR_NO_TYPE: "CH",
+					TRANS_OPER: "010",
+					TRANS_OPER_TEL_NO_ENC: "jdDGiud+idjdw==",
+					CUST_CODE: "AF837",
+					SONGJANG_NO: "95612983401283828777",
+					FENDDT: "20240716",
+					POST_CODE1: "32949",
+					CLIENT_ADDRESS: "마포구 성산동",
+					DLV_ADDRESS: "마포구 서교동",
+					TEL_NO: "01090118314",
+					HP_NO: "02090118314",
+					COMMAND: "TIGER_UPPERCUT",
+					TIMS: "154311",
+					TYPE: "B"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+	
+	// SD007_WMS
+	} else if (ifId == "SD007_WMS") {
+		url = "/wms/sapwsdl/sd007wms.do";
+		param = {
+			list: [
+				{
+					CENDDT: "20240716",
+					EDATU: "20240716",
+					SEQ: "1",
+					SO_NO: "F0102T0102",
+					STATUS: "O",
+					TYPE: "T1",
+					VSART: "10"
+				},
+				{
+					CENDDT: "20240716",
+					EDATU: "20240716",
+					SEQ: "2",
+					SO_NO: "F1112T1112",
+					STATUS: "O",
+					TYPE: "T2",
+					VSART: "11"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+		
+	// SD009_WMS
+	} else if (ifId == "SD009_WMS") {
+		url = "/wms/sapwsdl/sd009wms.do";
+		param = {
+			list: [
+				{
+					TYPE: "B",
+					SO_NO: "F0102T0102",
+					SEQ: "1",
+					STATUS: "S",
+					CAR_NO: "CAR01",
+					TRANS_OPER: "010",
+					TRANS_OPER_TEL_NO_ENC: "jdDGiud+idjdw==",
+					TRANS_QTY: "11",
+					CUST_CODE: "ADS077",
+					CAR_NO_TYPE: "CH"
+				},
+				{
+					TYPE: "B",
+					SO_NO: "F0102T0102",
+					SEQ: "2",
+					STATUS: "S",
+					CAR_NO: "CAR01",
+					TRANS_OPER: "010",
+					TRANS_OPER_TEL_NO_ENC: "jdDGiud+idjdw==",
+					TRANS_QTY: "11",
+					CUST_CODE: "ADS077",
+					CAR_NO_TYPE: "CH"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+		
+	// SD010_WMS
+	} else if (ifId == "SD010_WMS") {
+		url = "/wms/sapwsdl/sd010wms.do";
+		param = {
+			list: [
+				{
+					TYPE: "A",
+					SO_NO: "729399421378",
+					SEQ: "1",
+					S_TIME: "120000",
+					E_TIME: "180000"
+				},
+				{
+					TYPE: "A",
+					SO_NO: "847436372388",
+					SEQ: "2",
+					S_TIME: "120000",
+					E_TIME: "180000"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240717",
+				ZXTIMS: "110721"
+			}
+		};
+		
+	// SD011_WMS
+	} else if (ifId == "SD011_WMS") {
+		url = "/wms/sapwsdl/sd011wms.do";
+		param = {
+			list: [
+				{
+					BSTKD: "20240717",
+					STATUS: "S",
+					DENDDT: "20240717",
+					SEQ: "12",
+					SO_NO: "F0102T0102",
+					CAR_NO: "CAR01",
+					CAR_NO_TYPE: "CH",
+					TRANS_OPER: "010",
+					TRANS_OPER_TEL_NO_ENC: "jdDGiud+idjdw==",
+					CUST_CODE: "AF837",
+					SONGJANG_NO: "95612983401283828777",
+					FENDDT: "20240716",
+					TYPE: "B"
+				},
+				{
+					BSTKD: "20240717",
+					STATUS: "S",
+					DENDDT: "20240717",
+					SEQ: "2",
+					SO_NO: "F1112T1112",
+					CAR_NO: "CAR02",
+					CAR_NO_TYPE: "EL",
+					TRANS_OPER: "011",
+					TRANS_OPER_TEL_NO_ENC: "jdDGiud+idjdw==",
+					CUST_CODE: "AF837",
+					SONGJANG_NO: "95612983401283828888",
+					FENDDT: "20240717",
+					TYPE: "A"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240717",
+				ZXTIMS: "110721"
+			}
+		};
+		
+	// SD012_WMS
+	} else if (ifId == "SD012_WMS") {
+		url = "/wms/sapwsdl/sd012wms.do";
+		param = {
+			list: [
+				{
+					SEQ: "12",
+					SO_NO: "F0102T0102",
+					SONGJANG_NO: "95612983401283828777",
+					TYPE: "B"
+				},
+				{
+					SEQ: "2",
+					SO_NO: "F1112T1112",
+					SONGJANG_NO: "95612983401283828888",
+					TYPE: "A"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240717",
+				ZXTIMS: "110721"
+			}
+		};
+		
+	// SD013_WMS
+	} else if (ifId == "SD013_WMS") {
+		url = "/wms/sapwsdl/sd013wms.do";
+		param = {
+			list: [
+				{
+					BSTKD: "20240717",
+					SEQ: "2",
+					SO_NO: "F0102T0102",
+					FENDDT: "20240717",
+					TYPE: "A"
+				},
+				{
+					BSTKD: "20240717",
+					SEQ: "2",
+					SO_NO: "F1112T1112",
+					FENDDT: "20240717",
+					TYPE: "A"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240717",
+				ZXTIMS: "110721"
+			}
+		};
+	
+	// LEG050_WMS
+	} else if (ifId == "LEG050_WMS") {
+		url = "/wms/sapwsdl/leg050wms.do";
+		param = {
+			list: [
+				{
+					TRTYP: "A",
+					VBELN: "B",
+					POSNR: "AB1",
+					BSTKD: "BA",
+					WADAT_IST: "S",
+					ZDLVHR: "SS",
+					ZDLVCH: "SSS"
+				},
+				{
+					TRTYP: "A",
+					VBELN: "B",
+					POSNR: "AB2",
+					BSTKD: "BA",
+					WADAT_IST: "S",
+					ZDLVHR: "SS",
+					ZDLVCH: "SSS"
+				}
+			],
+			common: {
+				SYSUNAME: "CASAWMS",
+				ZXDATS: "20240716",
+				ZXTIMS: "110721"
+			}
+		};
+	}
+	
+	//
+	// 전송
+	console.log("Start to call I/F " + ifId + "...");
+	gfn_showLoadingBar();
+	
+	gfn_ajaxRequest({
+		  method: "POST"
+		, url   : url
+		, dataType: "json"
+		, data  : JSON.stringify(param)
+		}, 
+		{
+			success: function(response, status, xhr) {
+				console.log(response);
+			},
+			error: function(response) {
+				console.log(response);
+			},
+			complete: function(response) {
+				gfn_closeLoadingBar();
+			}
+		}
+	);
+}
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// event 처리
+//////////////////////////////////////////////////////////////////
+
+/**
+ * 첫 번째 Form field에 대한 change event 처리
+ */
+function fn_searchFormChangeHandler(event, data, form) {
+	//console.group();
+	//console.log("fn_searchFormChangeHandler: ", FormUtil.getFormValue(searchForm, data[0]));
+	//console.log(event);		// event type 또는 event 객체
+	//console.log(data);		// data[0]: Form name, data[1]: Form value
+	//console.log(form);		// Form 객체
+	//console.groupEnd();
+}
+
+/**
+ * Form 영역 내 button대한 click event 처리
+ */
+let isShow = true;
+
+function fn_searchFormClickHandler(event, data, form) {
+	console.group();
+	console.log("fn_searchFormClickHandler");
+	console.log(event);		// event 객체(PointerEvent)
+	console.log(data);		// data[0]: Button ID, data[1]: event 객체(PointerEvent)
+	console.log(form);		// Form 객체
+	console.groupEnd();
+	
+	// ALERT button
+	if ( data[0] == "btn_alert" ) {
+		let message = " 입력값: 코드 " + FormUtil.getFormValue(searchForm, "CD_NM") + "(길이 " + FormUtil.getFormValue(searchForm, "CD_LEN") + ")";
+		
+		gfn_alert(message, null, {callback: function() {
+			console.log("Callback for Alert");
+		}});
+	
+	} else if ( data[0] == "btn_showHide" ) {
+		if ( isShow ) {
+			FormUtil.hide(searchForm, "DATE");
+			isShow = false;
+		} else {
+			FormUtil.show(searchForm, "DATE");
+			isShow = true;
+		}
+	}
+}
+
+/**
+ * Confirm button대한 click event 처리
+ */
+function fn_confirmBtnClickHandler(event, form) {
+	console.group();
+	console.log("fn_confirmBtnClickHandler");
+	console.log(event);		// event 객체(PointerEvent)
+	console.log(form);
+	console.groupEnd();
+	
+	gfn_confirm("비밀번호를 초기화하시겠습니까?", null, function(result) {
+		if ( result ) {
+			FormUtil.clearFormValue(searchForm, "PSWD");
+		}
+	});
+}
+
+/**
+ * Check YN button대한 click event 처리
+ */
+function fn_checkYnClickHandler(event, form) {
+	console.log("fn_checkYnClickHandler");
+	
+	var postParam = FormUtil.getFormValues(searchForm);
+ 	//postParam.USE_YN = FormUtil.getCheckboxValue(searchForm, "USE_YN", "Y", "N");	// CheckBox true/false 여부 확인 후 true = "Y" / false = "N" -> postParam의 USE_YN 에 넣음
+	postParam.USE_YN = FormUtil.getCheckboxValue(searchForm, "USE_YN");	// default -> Y/N
+	alert("USE_YN: " + postParam.USE_YN);
+	//
+	// postParam 후처리
+}
+
+/**
+ * Check 01 button대한 click event 처리
+ */
+function fn_check01ClickHandler(event, form) {
+	console.log("fn_check01ClickHandler");
+	
+	var postParam = FormUtil.getFormValues(searchForm);
+	postParam.USE_YN = FormUtil.getCheckboxValue(searchForm, "USE_YN", 1, 0);	// CheckBox true/false 여부 확인 후 true = 1 / false = 0 -> postParam의 USE_YN 에 넣음
+	alert("USE_YN: " + postParam.USE_YN);
+	//
+	// postParam 후처리
+}
+
+
+/**
+ * 두 번째 Form field에 대한 change event 처리
+ */
+function fn_inputFormChangeHandler(event, data, form) {
+	let ctgrCd = data[1];
+	
+	//
+	// 하드 코딩 데이터 카테고리
+	
+	// 카테고리(대) 변경
+	if ( data[0] == "CTGR_L" ) {
+		// '전체' 선택
+		if ( gfn_isEmpty(ctgrCd) ) {
+			FormUtil.setSelectOptions(inputForm, "CTGR_M", [ categoryDefaultItem ]);
+			FormUtil.setSelectOptions(inputForm, "CTGR_S", [ categoryDefaultItem ]);
+			
+		} else {
+			FormUtil.setSelectOptions(inputForm, "CTGR_M", FormUtil.filterForOptions(mCategoryList, ctgrCd));
+			FormUtil.setSelectOptions(inputForm, "CTGR_S", [ categoryDefaultItem ]);
+		}
+	
+	// 카테고리(중) 변경
+	} else if ( data[0] == "CTGR_M" ) {
+		// '전체' 선택
+		if ( gfn_isEmpty(ctgrCd) ) {
+			FormUtil.setSelectOptions(inputForm, "CTGR_S", [ categoryDefaultItem ]);
+			
+		} else {
+			FormUtil.setSelectOptions(inputForm, "CTGR_S", FormUtil.filterForOptions(sCategoryList, ctgrCd));
+		}
+
+		
+	//
+	// DB 데이터 카테고리
+	
+	// 카테고리(대)2 변경
+	} else if ( data[0] == "CTGR_L2" ) {
+		// '전체' 선택
+		if ( gfn_isEmpty(ctgrCd) ) {
+			FormUtil.setSelectOptions(inputForm, "CTGR_M2", [ categoryDefaultItem ]);
+			FormUtil.setSelectOptions(inputForm, "CTGR_S2", [ categoryDefaultItem ]);
+			
+		} else {
+			fn_searchCategoryList("M", ctgrCd, function(response, status, xhr) {
+				FormUtil.setSelectOptions(inputForm, "CTGR_M2", response.result);
+			});
+			FormUtil.setSelectOptions(inputForm, "CTGR_S2", [ categoryDefaultItem ]);
+		}
+		
+	// 카테고리(중)2 변경
+	} else if ( data[0] == "CTGR_M2" ) {
+		// '전체' 선택
+		if ( gfn_isEmpty(ctgrCd) ) {
+			FormUtil.setSelectOptions(inputForm, "CTGR_S2", [ categoryDefaultItem ]);
+			
+		} else {
+			fn_searchCategoryList("S", ctgrCd, function(response, status, xhr) {
+				FormUtil.setSelectOptions(inputForm, "CTGR_S2", response.result);
+			});
+		}
+	
+	// 카테고리(대)3 변경
+	} else if ( data[0] == "CTGR_L3" ) {
+		// '전체' 선택
+		if ( gfn_isEmpty(ctgrCd) ) {
+			FormUtil.show(inputForm, "L3_DATE");
+			FormUtil.show(inputForm, "L3_MONTH");
+			FormUtil.show(inputForm, "L3_YEAR");
+			
+		} else if (ctgrCd == "L_DATE") {
+			FormUtil.show(inputForm, "L3_DATE");
+			FormUtil.hide(inputForm, "L3_MONTH");
+			FormUtil.hide(inputForm, "L3_YEAR");
+			
+		} else if (ctgrCd == "L_MONTH") {
+			FormUtil.hide(inputForm, "L3_DATE");
+			FormUtil.show(inputForm, "L3_MONTH");
+			FormUtil.hide(inputForm, "L3_YEAR");
+			
+		} else if (ctgrCd == "L_YEAR") {
+			FormUtil.hide(inputForm, "L3_DATE");
+			FormUtil.hide(inputForm, "L3_MONTH");
+			FormUtil.show(inputForm, "L3_YEAR");
+			
+		}
+	}
+}
+
+
+/**
+ * Category load button에 대한 click event 처리
+ */
+function fn_categoryInitBtnClickHandler(event, form) {
+	FormUtil.setSelectOptions(inputForm, "CTGR_L", lCategoryList);
+	FormUtil.setSelectOptions(inputForm, "CTGR_M", [ categoryDefaultItem ]);
+	FormUtil.setSelectOptions(inputForm, "CTGR_S", [ categoryDefaultItem ]);
+}
+
+
+/**
+ * Category values button에 대한 click event 처리
+ */
+function fn_categoryValuesBtnClickHandler(event, form) {
+	let message = "카테고리(대) = " + FormUtil.getFormValue(inputForm, "CTGR_L") + "\n" +
+				  "카테고리(중) = " + FormUtil.getFormValue(inputForm, "CTGR_M") + "\n" +
+				  "카테고리(소) = " + FormUtil.getFormValue(inputForm, "CTGR_S");
+	gfn_alert(message);
+}
+
+
+
+// Popup page 객체
+let sample0001p01;
+
+/**
+ * '카테고리 팝업' button에 대한 click event 처리
+ */
+function fn_categoryPopupBtnClickHandler(event, form) {
+	let config = {
+		  id: "smpl0001p01"
+		, width: 1024
+		, height: 300
+		, title: "카테고리 선택"
+		, callback: "smpl0001p01_popupCallback"
+		, resizable: true
+	};
+	
+	let param = { 
+		  DEFAULT_CTGR_L: FormUtil.getFormValue(inputForm, "CTGR_L2")
+		, DEFAULT_CTGR_M: FormUtil.getFormValue(inputForm, "CTGR_M2")
+		, DEFAULT_CTGR_S: FormUtil.getFormValue(inputForm, "CTGR_S2")
+		, listData: [ { code: "A", name: "A" }, { code: "B", name: "B" } ]
+		, item: { value: "CTGR_L", content: "대분류" }
+	};
+	
+	sample0001p01 = gfn_openPopup("/sample/sample0001_P01.do", config, param);
+}
+
+/**
+ * '우편번호 찾기' button에 대한 click event 처리
+ */
+function fn_postCodeBtnClickHandler(event, form) {
+	gfn_searchPostcode(function(data) {
+		console.log(data);
+		FormUtil.setFormValue(inputForm, "POST_CD", data.postCd);
+		FormUtil.setFormValue(inputForm, "ADDR", data.addr);
+		FormUtil.setFormValue(inputForm, "ROAD_ADDR", data.roadAddr);
+		FormUtil.setFormValue(inputForm, "JIBUN_ADDR", data.jibunAddr);
+		FormUtil.setFormValue(inputForm, "DETAIL_ADDR", data.detailAddr);
+		
+		FormUtil.setFocus(inputForm, "DETAIL_ADDR");
+	});
+}
+
+/**
+ * 'SESSION 정보' button에 대한 click event 처리
+ */
+function fn_sessionInfoBtnClickHandler(event, form) {
+	let userInfo = gfn_getUserInfo("LOGIN_ID");
+	console.log("LOGIN_ID = ", userInfo.LOGIN_ID);
+	
+	userInfo = gfn_getUserInfo("USER_NM", "DEPT_NAME");
+	console.log("USER_NM = ", userInfo.USER_NM, ", DEPT_NAME = ", userInfo.DEPT_NAME);
+	
+    userInfo = gfn_getUserInfo();
+    console.log(userInfo);
+}
+
+/**
+ * SAP I/F WSDL 실행 button에 대한 click event 처리
+ */
+function fn_exeSapifWsdlClickHandler(event, form) {
+	let ifId = FormUtil.getFormValue(testForm, "SAP_IF_WSDL");
+	
+	if (gfn_isEmpty(ifId)) {
+		gfn_alert("SAP I/F WSDL 항목을 선택하십시오.", "", function() {
+			FormUtil.setFocus(testForm, "SAP_IF_WSDL");
+		});
+		
+	} else {
+		fn_exeSapIfWsdl(ifId);
+	}
+}
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// callback 처리
+//////////////////////////////////////////////////////////////////
+
+
+/**
+ * Popup에 대한 callback 함수
+ */
+function smpl0001p01_popupCallback(action, data) {
+	if ( action == "CANCEL" ) {
+		//
+		// 원래 DHTMLX7 Window(Popup으로 사용) 객체에 close() 함수는 없으나
+		// 해당 popup에서 gfn_openPopup()을 호출하여 생성한 경우
+		// close() 함수가 추가되며 이 함수를 통하여 popup을 닫고 관련 resource를 해제할 수 있음
+		sample0001p01.close();
+		
+		// gfn_openPopup()을 호출하여 생성한 경우
+		// gfn_closePopup()를 호출해서 닫을 수도 있다. 효과는 위의 코드와 동일
+		//gfn_closePopup(sample0001p01);
+		
+	} else if ( action == "OK" ) {
+		console.log(data);
+	}
+}
+
+</script>
+</html>

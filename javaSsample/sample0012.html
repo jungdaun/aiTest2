@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/dhtmlxAppLayout7 :: layout(~{::script})}" xmlns:th="http://www.thymeleaf.org">
+
+<link rel='stylesheet' type='text/css' th:href='@{/AUIGrid/MyCalendarRenderer.css}' />
+
+<script th:src="@{/js/auigrid/includeAUIGrid.js}"></script>
+<script th:src="@{/AUIGrid/renderers/AUIGrid.MyCalendarRenderer.js}"></script>
+<!-- 사용자가 작성한 렌더러 JS -->
+
+<script>
+
+//오늘 날짜
+var originDate = new Date();
+
+// AUIGrid 생성 후 반환 ID
+var myGridID;
+
+//layout
+var layoutMain;
+
+//layout - a
+var frmSearch;
+
+//layout - b
+var grdMain;
+var theme = "default";
+//local variable
+
+$(function(){
+
+	/****************************************************************************************************
+	 * 초기화
+	 ****************************************************************************************************/
+	// Layout
+	const layoutConfig = {
+	    type: "line",
+	    rows: [
+	        { id: "grid", height: "96%", html: '<div id="grdMain" style="height: 100%;"></div>' }
+	    ]
+	};
+    layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+    
+	/* Grid-메인 */
+	var columnLayout = [{
+		dataField : "0",
+		headerText : "일",
+		style : "my-sunday-style",
+		headerStyle : "my-sunday-style",
+		renderer : {
+			type : "CustomRenderer",
+			jsClass : AUIGrid.MyCalendarRenderer
+		}
+	}, {
+		dataField : "1",
+		headerText : "월",
+		renderer : {
+			type : "CustomRenderer",
+			jsClass : AUIGrid.MyCalendarRenderer
+		}
+	}, {
+		dataField : "2",
+		headerText : "화",
+		renderer : {
+			type : "CustomRenderer",
+			jsClass : AUIGrid.MyCalendarRenderer
+		}
+	}, {
+		dataField : "3",
+		headerText : "수",
+		renderer : {
+			type : "CustomRenderer",
+			jsClass : AUIGrid.MyCalendarRenderer
+		}
+	}, {
+		dataField : "4",
+		headerText : "목",
+		renderer : {
+			type : "CustomRenderer",
+			jsClass : AUIGrid.MyCalendarRenderer
+		}
+	}, {
+		dataField : "5",
+		headerText : "금",
+		renderer : {
+			type : "CustomRenderer",
+			jsClass : AUIGrid.MyCalendarRenderer
+		}
+	}, {
+		dataField : "6",
+		headerText : "토",
+		style : "my-saturday-style",
+		headerStyle : "my-saturday-style",
+		renderer : {
+			type : "CustomRenderer",
+			jsClass : AUIGrid.MyCalendarRenderer
+		}
+	}];
+	
+	// AUIGrid 그리드를 생성합니다.
+	AUIGridUtil.create(columnLayout);
+
+
+	/****************************************************************************************************
+	 * 이벤트 생성
+	 ****************************************************************************************************/
+
+    // ============================================
+    // Event - window resize 시 grid resize
+    // ============================================
+    $(window).resize(function() {
+        AUIGrid.resize("#grdMain");
+    });
+
+});
+
+//조회
+function fn_search() {
+
+}
+
+//AUIGrid 를 생성합니다.
+function createAUIGrid(columnLayout) {
+	
+	// 그리드 속성
+	var auiGridProps = {
+		
+		selectionMode : "none",
+		
+		enableSorting : false,
+		
+		showRowNumColumn : false,
+		
+		enableColumnResize : false,
+		
+		//rowHeight 80으로 설정
+		rowHeight : 80
+	};
+	
+	// 실제로 #grid_wrap 에 그리드 생성
+	myGridID = AUIGrid.create("#grdMain", columnLayout, auiGridProps);
+	
+	// 데이터 생성
+	var gridData = genGridData(originDate);
+	
+	// 그리드에 데이터 삽입
+	AUIGrid.setGridData(myGridID, gridData);
+};
+
+function genGridData(d) {
+	var date = originDate = new Date(d);
+	var thisYear = date.getFullYear();
+	var thisMonth = date.getMonth() + 1; // 실제 보이는 월 
+	var startDay = new Date(thisYear,  thisMonth - 1, 1);
+	var endDay = new Date(thisYear,  thisMonth, 0); // 말일
+	var startDay = startDay.getDay();
+	var endCount = endDay.getDate();
+	var weekArray = [];
+	var data = [];
+	var i;
+	
+	// 달력 앞의 빈 날짜들
+	for(i=0; i<startDay; i++) {
+		weekArray.push(null);
+	}
+	
+	// 진짜 날짜들
+	for(i=1; i<=endCount; i++) {
+		
+		if(weekArray.length == 7) {
+			data.push(weekArray);
+			weekArray = [];
+		}
+		weekArray.push({
+			"date" : i,
+			"value" : Math.floor(Math.random() * 100)
+		})
+	}
+	
+	// 달력 마지막 주의 날짜들
+	if(weekArray.length != 0) {
+		data.push(weekArray);
+	}
+	/* 
+	document.getElementById("dateText").innerHTML = date.getFullYear() + "년 " + (date.getMonth() + 1) + "월";
+	 */
+	//console.log(JSON.stringify(data));
+	return data;
+};
+
+</script>
+</html>

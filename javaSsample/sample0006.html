@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html th:replace="~{layout/dhtmlxAppLayout7 :: layout(~{::script})}"  xmlns:th="http://www.thymeleaf.org">
+
+<script th:src="@{/js/auigrid/includeAUIGrid.js}"></script>
+
+<!-- excel read lib -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.15.5/xlsx.full.min.js"></script>
+
+<script th:inline="javascript">
+// layout main
+var layoutMain;
+
+// 검색 조건 form
+var frmSearch;
+
+// excel importer
+var simpleXlsxImporter;
+var mulltiHeaderXlsxImporter;
+
+// 사용자 목록 grid
+var grdMain;
+var grdMultiHeader;
+
+// toolbar
+var toolbar;
+
+// 사용자 추가 form
+var frmInput;
+
+var menuNm = /*[[${programInfo.get('MENU_NM')}]]*/ "";
+var menuCd = /*[[${programInfo.get('MENU_CD')}]]*/ "";
+
+
+$(function() {
+	fn_setCommonButtonLabel("etc1", "Multi Grid XLSX 받기");
+	fn_setCommonButtonLabel("etc2", "Simple XLSX Upload");
+	fn_setCommonButtonLabel("etc3", "Mullti Header XLSX Upload");
+
+	
+	//
+	// 1. 기본 layout 구성
+	const layoutConfig = {
+	    type: "line",
+	    rows: [
+	    	{
+	    		type: "line",
+	    		width: "100%",
+	    		height: "content",
+	    		resizable: true,
+	    		rows: [
+	    			FormUtil.getHrefConfig({ id: "sampleDownloadBasic", href: "/etc/sample_basic.xlsx", text: "기본 Sample Download" }),
+	    			FormUtil.getHrefConfig({ id: "sampleDownloadMulti", href: "/etc/sample_multiheader.xlsx", text: "Multi Header Sample Download" })
+	    		]
+	    	},
+	        {
+	            type: "line",
+	            height: "50%",
+	            resizable: true,
+	            rows: [
+	            	// size를 모두 0으로 하여 hidden 효과 구현. hidden을 true로 하면 정상적으로 작동되지 않음
+	            	{ id: "excelImport1", width: 0, height: 0 },
+	                { id: "grid1", height: "100%", html: '<div id="grdSimple" style="height: calc(100% - 10px);"></div>' },
+	                
+	            ]
+	        },
+	        {
+	            type: "line",
+	            height: "50%",
+	            resizable: true,
+	            rows: [
+	            	{ id: "excelImport2", height: "content", header: "Excel Import(Multi Header)", headerHeight: "35px" },
+	                { id: "grid2", height: "100%", html: '<div id="grdMultiHeader" style="height: calc(100% - 10px);"></div>' },
+	                
+	            ]
+	        }
+	    ]
+	};
+	
+	// layout 생성
+    layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+ 	
+	
+    //
+	// 2. 상단 Grid
+    const columnLayout1 = [
+		AUIGridUtil.getColumnConfig({ dataField: "OUT_DATE", headerText: "출고예정일", width: 100 }),
+		AUIGridUtil.getColumnConfig({ dataField: "ITEM_CD",  headerText: "품목코드", width: 100 }),
+		AUIGridUtil.getColumnConfig({ dataField: "ITEM_NM",  headerText: "품목명", width: 250 }),
+		AUIGridUtil.getColumnConfig({ dataField: "QTY",      headerText: "수량", width: 60 }),
+		AUIGridUtil.getColumnConfig({ dataField: "DEL_TYPE", headerText: "배송구분", width: 60 }),
+		AUIGridUtil.getColumnConfig({ dataField: "EMP_TYPE", headerText: "직원구분", width: 60 }),
+		AUIGridUtil.getColumnConfig({ dataField: "EMP_NO",   headerText: "사번", width: 100 }),
+		AUIGridUtil.getColumnConfig({ dataField: "CUST_CD",  headerText: "거래처 코드", width: 100 }),
+		AUIGridUtil.getColumnConfig({ dataField: "APPR_NM",  headerText: "결제자", width: 100 }),
+		AUIGridUtil.getColumnConfig({ dataField: "BIZ_NO",   headerText: "사업자번호", width: 100 }),
+		AUIGridUtil.getColumnConfig({ dataField: "REMARK",   headerText: "비고", width: "*" })
+    ];
+    
+    grdMain = AUIGridUtil.create( "#grdSimple", columnLayout1, {} );
+    
+    simpleXlsxImporter = gfn_initExcelImport("#grdSimple", layoutMain.getCell("excelImport1"), fn_exImportCallback, {id: "simpleXlsxImp"});
+
+
+    //
+	// 3. 하단 Grid
+	const gridProps2 = {
+		fixedColumnCount: 3
+    };
+    
+    const columnLayout2 = [
+		AUIGridUtil.getColumnConfig({ dataField: "OUT_DATE", headerText: "출고예정일", width: 100 }),
+		AUIGridUtil.getColumnConfig({ dataField: "ITEM_CD",  headerText: "품목코드", width: 100 }),
+		AUIGridUtil.getColumnConfig({ dataField: "ITEM_NM",  headerText: "품목명", width: 250 }),
+		AUIGridUtil.getColumnConfig({ dataField: "QTY",      headerText: "수량", width: 60 }),
+		AUIGridUtil.getColumnConfig({ dataField: "DEL_TYPE", headerText: "배송구분", width: 60 }),
+		AUIGridUtil.getColumnConfig({ dataField: "EMP_TYPE", headerText: "직원구분", width: 60 }),
+		AUIGridUtil.getColumnConfig({ dataField: "EMP_NO",   headerText: "사번", width: 100 }),
+		AUIGridUtil.getColumnConfig({ dataField: "CUST_CD",  headerText: "거래처 코드", width: 100 }),
+		AUIGridUtil.getColumnConfig({ dataField: "APPR_NM",  headerText: "결제자", width: 100 }),
+		AUIGridUtil.getColumnConfig({ dataField: "BIZ_NO",   headerText: "사업자번호", width: 100 }),
+		{
+			headerText: "주문정보",
+			children: [
+				AUIGridUtil.getColumnConfig({ dataField: "SENDER",   headerText: "보내는사람", width: 100 }),
+				AUIGridUtil.getColumnConfig({ dataField: "SENDER_TEL",   headerText: "연락처", width: 100 }),
+				AUIGridUtil.getColumnConfig({ dataField: "SENDER_ZIPCD",   headerText: "우편번호", width: 100 }),
+				AUIGridUtil.getColumnConfig({ dataField: "SENDER_ADDR",   headerText: "주소", width: 300 }),
+				AUIGridUtil.getColumnConfig({ dataField: "SENDER_ADDR_DTL",   headerText: "상세주소", width: 300 })
+			]
+		},
+		{
+			headerText: "수취정보",
+			children: [
+				AUIGridUtil.getColumnConfig({ dataField: "RECV",   headerText: "받는사람", width: 100 }),
+				AUIGridUtil.getColumnConfig({ dataField: "RECV_TEL",   headerText: "연락처", width: 100 }),
+				AUIGridUtil.getColumnConfig({ dataField: "RECV_ZIPCD",   headerText: "우편번호", width: 100 }),
+				AUIGridUtil.getColumnConfig({ dataField: "RECV_ADDR",   headerText: "주소", width: 300 }),
+				AUIGridUtil.getColumnConfig({ dataField: "RECV_ADDR_DTL",   headerText: "상세주소", width: 300 }),
+			]
+		},
+		AUIGridUtil.getColumnConfig({ dataField: "REMARK",   headerText: "비고", width: "*" })
+    ];
+    
+    grdMultiHeader = AUIGridUtil.create( "#grdMultiHeader", columnLayout2, gridProps2 );
+
+    let impConfig = {
+    	id: "multiHeaderXlsxImp",
+    	startRow: 2,
+    	columns: [ 
+    		"OUT_DATE", "ITEM_CD", "ITEM_NM", "QTY", "DEL_TYPE", "EMP_TYPE", "EMP_NO", "CUST_CD", "APPR_NM", "BIZ_NO", 
+    		"SENDER", "SENDER_TEL", "SENDER_ZIPCD", "SENDER_ADDR", "SENDER_ADDR_DTL",
+    		"RECV", "RECV_TEL", "RECV_ZIPCD", "RECV_ADDR", "RECV_ADDR_DTL",
+    		"REMARK"
+    	]
+    };
+    
+    mulltiHeaderXlsxImporter = gfn_initExcelImport("#grdMultiHeader", layoutMain.getCell("excelImport2"), fn_exImportCallback, impConfig);
+});
+
+
+// 엑셀 Export
+function fn_excel() {
+	// 엑셀 헤더
+	gfn_exportGridAsXlsx(menuNm, grdMain);
+}
+
+
+// Multi grid export
+function fn_etc1() {
+	// 기본 sheet명 사용
+	//gfn_exportMultiGridAsXlsx(menuNm, grdMain, grdMultiHeader);
+	
+	// sheet명 지정
+	gfn_exportMultiGridAsXlsx(menuNm, {grid: grdMain, sheetName: "사용자 목록"}, {grid: grdMultiHeader, sheetName: "두 번째 목록"});
+	
+	// mixed
+	//gfn_exportMultiGridAsXlsx(menuNm, {grid: grdMain, sheetName: "사용자 목록"}, grdMultiHeader);
+}
+
+
+// Simple XLSX upload
+function fn_etc2() {
+	simpleXlsxImporter.browse();
+}
+
+
+// Multi Header XLSX upload
+function fn_etc3() {
+	mulltiHeaderXlsxImporter.browse();
+}
+
+
+// 엑셀 Import 후 callback
+function fn_exImportCallback() {
+	console.log("Callback for Excel import");
+}
+
+</script>
+</html>

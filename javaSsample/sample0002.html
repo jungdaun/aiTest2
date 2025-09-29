@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+
+<!-- 
+	기본 컨테이너
+		- 기본 생성 로직
+		- Tab 화면 처리
+		 
+	@author sklee21
+ -->
+
+<html th:replace="~{layout/dhtmlxAppLayout7 :: layout(~{::script})}"  xmlns:th="http://www.thymeleaf.org">
+
+<script th:src="@{/js/auigrid/includeAUIGrid.js}"></script>
+
+<script>
+//////////////////////////////////////////////////////////////////
+// Form 변수
+//////////////////////////////////////////////////////////////////
+
+// Tabbar 객체
+let tabbar;
+
+
+let containerForm;
+
+let extPageLoadForm1;
+let extPageLoadForm2;
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// 초기화 작업
+//////////////////////////////////////////////////////////////////
+$(function() {
+	//
+	// 1. 기본 layout 구성
+	const layoutConfig = {
+	    type: "line",
+	    
+	    rows: [
+    		// 첫 번째 줄 영역: Tab
+            { id: "tabArea", height: "content", header: "Tab", headerHeight: "35px" },
+            
+         	// 두 번째 줄 영역: 공통 컴포넌트 load
+            { id: "containerArea", height: "content", header: "Container", headerHeight: "35px" },
+            
+            // 세 번째 줄 영역: 외부 페이지 load 영역
+            {
+            	height: "100%",
+            	cols: [
+            		{
+            			// 현재 page에 parameter 변경해서 load하기
+            			rows: [
+    	            		{ id: "loadFormArea1", width: "100%", height: "content", header: "Load External Page1", headerHeight: "35px" },
+    	    	            FormUtil.getExtPageLayoutConfig({ id: "extPageArea1", width: "100%", height: "100%" })
+            			]
+            		},
+            		{
+            			// URL 자체를 load하기
+            			rows: [
+    	            		{ id: "loadFormArea2", width: "100%", height: "content", header: "Load External Page2", headerHeight: "35px" },
+    	    	            FormUtil.getExtPageLayoutConfig({ id: "extPageArea2", width: "100%", height: "100%" })
+            			]
+            		}
+            	]
+            }
+	    ]
+	};
+	
+	// layout 생성
+    layoutMain = new dhx.Layout("layoutObj", layoutConfig);
+    
+	
+	//
+	// 2. Page 생성
+	
+	//
+	// 2.1. 첫 번째 줄 영역 생성: Tab
+	tabbar = FormUtil.createTabbar(null, {
+		mode: "top",
+		views: [
+	        { id: "tabView1", tab: "Tab View 1" },
+	        { id: "tabView2", tab: "Tab View 2" },
+	        { id: "tabView3", tab: "Tab View 3" },
+	        { id: "tabView4", tab: "Tab View 4" }
+    	]
+	});
+	
+	tabbar.events.on("change", function() {
+		let currCell = tabbar.getActive();
+		console.log("Tab has changed to " + currCell);
+	});
+	
+	
+	let tabViewForm1 = new dhx.Form("tabViewForm1", {
+		height: 200,
+		rows: [
+			FormUtil.getTextInputConfig({ id: "tabView1_DATA_CD", label: "코드", placeholder: "코드를 입력하세요.", width: 400 }),
+			FormUtil.getTextInputConfig({ id: "tabView1_DATA_NM", label: "코드명", placeholder: "코드명을 입력하세요.", width: 400 }),
+		]
+	});
+	
+	let tabViewForm2 = new dhx.Form("tabViewForm2", {
+		height: 200,
+		rows: [
+    		// 일자, 년월, 년도
+    		FormUtil.getDateConfig( { label: "일자", name: "DATE", width: 300, labelWidth: 300, editable: true } ),
+    		//FormUtil.getMonthConfig( { label: "년월", name: "MONTH", width: 300, labelWidth: 300 } ),
+    		//FormUtil.getYearConfig( { label: "년도", name: "YEAR", width: 300, labelWidth: 300 } )
+		]
+	});
+	
+	let tabViewForm3 = new dhx.Form("tabViewForm3", {
+		height: 200,
+		rows: [
+    		// Radio buttons(with 하드코딩 데이터)
+    		FormUtil.getRadioGroupConfig(
+    			{ name: "CS_TYPE", label: "CS구분" },
+     			[ { text: "Client", value: "1", checked: true }, { text: "Server", value: "2" } ]
+    		),
+    		
+    		// Textarea
+    		FormUtil.getTextareaConfig({
+    			width: "80%", height: 120, label: "내용", name: "CONTENT", labelWidth: 300, min: 10, max: 100
+    		})
+		]
+	});
+	
+	
+	//
+	// 2.1.4.1 Tabbar 내 Form 및 Grid 호출을 위한 layout 생성
+	const tabView4Config = {
+	    type: "line",
+	    height: 300,
+	    rows: [
+	        { id: "frmSearch", height: SearchFormHeight[1], header: "", headerHeight: "" },
+	        {
+	            type: "line",
+	            cols: [
+	                { id: "grid", height: "100%", html: '<div id="grdMain" style="height: calc(100% - 10px);"></div>', header: "사용자 목록", headerHeight: "35px" },
+	                {
+	                	width: "400px",
+	                	rows: [
+	                		{ id: "toolbar", height: "85px", header: "사용자", headerHeight: "35px" },
+	                		{ id: "frmInput" }
+	                	]
+	                }
+	            ]
+	        },
+	    ]
+	};
+		
+	// layout 생성
+    tabViewForm4 = new dhx.Layout("tabView4Obj", tabView4Config);
+	
+	
+	//
+	// 2.1.4.2 검색 조건 Form 생성
+	frmSearch = new dhx.Form(null, {
+        rows: [
+                {
+                    cols: [
+                    	FormUtil.getTextInputConfig( { width: 300, label: "검색1", name: "TAB4_SEARCH1", labelWidth: 300 } ),
+                    	FormUtil.getTextInputConfig( { width: 300, label: "검색2", name: "TAB4_SEARCH2", labelWidth: 300 } ),
+                    	FormUtil.getSelectConfig(
+                      		  { width: 300, label: "사용여부", name: "TAB4_USE_YN", labelWidth: 300, required: true }
+                      		, [ { content: "전체", value: "ALL" }, { content: "사용", value: "Y" }, { content: "미사용", value: "N" } ]
+                      	)
+                    ]
+                }
+            ]
+    });
+	
+	tabViewForm4.getCell("frmSearch").attach(frmSearch);
+	
+	
+	//
+	// 2.1.4.3. 툴바 생성
+    toolbar = new dhx.Toolbar(null, {
+      css:"dhx_widget--bordered"
+    });
+    const toolbarConfig = [
+        { id: "btn1", value: "버튼1" },
+        { type: "separator" },
+        { id: "btn2", value: "버튼2" },
+        { type: "separator" },
+        { id: "btn3", value: "버튼3" },
+        { type: "separator" }
+    ];
+    toolbar.data.parse(toolbarConfig);
+    tabViewForm4.getCell("toolbar").attach(toolbar);
+	/* Toolbar */
+		
+	
+	//
+	// 2.1.4.4. 그리드 데이터 추가 Form 생성
+	frmInput = new dhx.Form(null, {
+		rows: [
+			FormUtil.getTextInputConfig( { width: 300, label: "조건1", name: "TAB4_INPUT1", labelWidth: 300 } ),
+			FormUtil.getTextInputConfig( { width: 300, label: "조건2", name: "TAB4_INPUT2", labelWidth: 300 } ),
+			FormUtil.getSelectConfig(
+            		  { width: 300, label: "사용여부", name: "TAB4_USE_YN", labelWidth: 300, required: true }
+            		, [ { content: "전체", value: "ALL" }, { content: "사용", value: "Y" }, { content: "미사용", value: "N" } ]
+            	)
+            ]
+	});
+    
+	tabViewForm4.getCell("frmInput").attach(frmInput);
+    
+    
+    //
+	// 2.1.4.5. 메인 그리드 생성
+    let mainProps = {
+//     	editable: false
+    };
+
+    mainColumnLayout = [
+    	AUIGridUtil.getColumnConfig({ dataField: "TAB4_INPUT1", headerText: "조건1", width: 120 }),
+    	AUIGridUtil.getColumnConfig({ dataField: "TAB4_INPUT2", headerText: "조건2", width: 120 }),
+    	AUIGridUtil.getDropDownColumnConfig({
+    		dataField: "USE_YN", headerText: "사용여부", width: 120,
+    		list: [ {value: "Y", content: "사용"}, {value: "N", content: "미사용"} ]
+    	})
+    ];
+    
+    grdMain = AUIGridUtil.create( "#grdMain", mainColumnLayout, mainProps );
+    /////////////////////////////////////////
+	
+	
+    tabbar.getCell("tabView1").attach(tabViewForm1);
+	tabbar.getCell("tabView2").attach(tabViewForm2);
+	tabbar.getCell("tabView3").attach(tabViewForm3);
+	tabbar.getCell("tabView4").attach(tabViewForm4);
+	
+	
+	//
+	// 2.2. 두 번째 줄 영역 생성: Container
+	// 공통 component 사용 시 활용 가능
+	containerForm = new dhx.Form("containerForm", {
+		rows: [
+			FormUtil.getContainerConfig({ id: "commonCategory" })
+		]
+	});
+	
+	//
+	// ★ 공통 컴포넌트인 searchCodeForm을 containerForm에 정의된 commonCategory Container에 추가 
+	FormUtil.attachToContainer(containerForm, getSearchCodeForm("searchCodeForm"), "commonCategory");
+	
+	
+	//
+	// 2.3. 세번 째 줄 영역 생성(Left): 외부 페이지 load1
+	extPageLoadForm1 = new dhx.Form("extPageLoadForm1", {
+		cols: [
+			FormUtil.getTextInputConfig({ id: "SEARCH_KEYWORD", value: "성수역 맛집" }),
+			FormUtil.getButtonConfig({ id: "btn_loadExtPage", text: "검색", width: 80, height: 32 })
+		]
+	});
+	
+    // load
+    FormUtil.loadExtPage("extPageArea1", "https://search.daum.net/search?" + StringUtil.toQuery({ w: "to", q: "성수역맛집" }));
+    
+    
+    //
+	// 2.4. 세번 째 줄 영역 생성(Right): 외부 페이지 load2
+	extPageLoadForm2 = new dhx.Form("extPageLoadForm2", {
+		cols: [
+			FormUtil.getTextInputConfig({ id: "URL", width: 300, value: "https://search.naver.com/search.naver?" }),
+			FormUtil.getButtonConfig({ id: "btn_loadExtPage", text: "Load", width: 80, height: 32 })
+		]
+	});
+	
+    // load
+    FormUtil.loadExtPage("extPageArea2", "https://docs.dhtmlx.com/");
+	
+	
+	//
+	// 3. 각 영역들을 layout에 추가
+    layoutMain.getCell("tabArea").attach(tabbar);
+    layoutMain.getCell("containerArea").attach(containerForm);
+    layoutMain.getCell("loadFormArea1").attach(extPageLoadForm1);
+    layoutMain.getCell("loadFormArea2").attach(extPageLoadForm2);
+    
+    
+    //
+    // 4. event 처리
+    FormUtil.addEventHandler(extPageLoadForm1, "btn_loadExtPage", FormEvent.CLICK, function() {
+    	fn_loadExtPage1();
+    });
+    
+    FormUtil.addEventHandler(extPageLoadForm1, "SEARCH_KEYWORD", FormEvent.KEYDOWN, function(event) {
+    	if ( event.keyCode == Keyboard.ENTER ) {
+    		fn_loadExtPage1();
+    	}
+    });
+    
+    FormUtil.addEventHandler(extPageLoadForm2, "btn_loadExtPage", FormEvent.CLICK, function() {
+    	fn_loadExtPage2();
+    });
+    
+    FormUtil.addEventHandler(extPageLoadForm2, "URL", FormEvent.KEYDOWN, function(event) {
+    	if ( event.keyCode == Keyboard.ENTER ) {
+    		fn_loadExtPage2();
+    	}
+    });
+
+	
+	//
+	// 4. 기본 데이터 조회
+	fn_initData();
+	
+	FormUtil.initForms(tabViewForm1, tabViewForm2, tabViewForm3);
+});
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// 개발자 정의 function
+//////////////////////////////////////////////////////////////////
+
+/**
+ * 왼쪽 외부 page load
+ */
+function fn_loadExtPage1() {
+	let param = { q: FormUtil.getFormValue(extPageLoadForm1, "SEARCH_KEYWORD") };
+	FormUtil.loadExtPage("extPageArea1", "https://search.daum.net/search?" + StringUtil.toQuery(param));
+}
+
+
+/**
+ * 오른쪽 외부 page load
+ */
+function fn_loadExtPage2() {
+	let url = FormUtil.getFormValue(extPageLoadForm2, "URL");
+	FormUtil.loadExtPage("extPageArea2", url);
+}
+
+
+/**
+ * 초기 데이터 조회
+ */
+function fn_initData() {
+}
+
+
+//Popup page 객체
+let samplePopupObj;
+
+
+/**
+ * 코드검색 공통 component Form 생성 및 반환
+ * 이 함수가 공통 component 역할을 한다.
+ */
+function getSearchCodeForm(id) {
+	let form = new dhx.Form(id, {
+		rows: [
+			{
+				cols: [
+					FormUtil.getTextInputConfig( { width: 200, label: "검색", name: "SEARCH_CD", labelWidth: 100, min: 2, max: 20 } ),
+					FormUtil.getButtonConfig( { id: "btn_search", text: "검색" } ),
+					FormUtil.getTextInputConfig( { width: 200, label: "", name: "SEARCH_NM", labelWidth: 0, readonly: true} )
+				]
+			}
+		]
+	});
+	
+	FormUtil.addEventHandler(form, "SEARCH_CD", FormEvent.KEYDOWN, function(event) {
+		if ( event.keyCode == Keyboard.ENTER ) {
+			console.log("Start to search...");
+		}
+	});
+	
+	FormUtil.addEventHandler(form, "btn_search", FormEvent.CLICK, function(event) {
+		let config = {
+			  id: "smpl0001p01"
+			, width: 1024
+			, height: 300
+			, title: "카테고리 선택"
+			, callback: "samplePopupCallback"
+			, resizable: true
+		};
+		
+		let param = { 
+			  SEARCH_KEYWORD: FormUtil.getFormValue(form, "SEARCH_CD")
+		};
+		
+		samplePopupObj = gfn_openPopup("/sample/sample0001_P01.do", config, param);
+	});
+	
+	return form;
+}
+
+
+
+//////////////////////////////////////////////////////////////////
+// event 처리
+//////////////////////////////////////////////////////////////////
+
+
+
+
+
+//////////////////////////////////////////////////////////////////
+// callback 처리
+//////////////////////////////////////////////////////////////////
+
+function samplePopupCallback(action, data) {
+	if ( action == "CANCEL" ) {
+		//
+		// 원래 DHTMLX7 Window(Popup으로 사용) 객체에 close() 함수는 없으나
+		// 해당 popup에서 gfn_openPopup()을 호출하여 생성한 경우
+		// close() 함수가 추가되며 이 함수를 통하여 popup을 닫고 관련 resource를 해제할 수 있음
+		samplePopupObj.close();
+		
+		// 그렇지 않는 경우 아래의 공통 함수로도 닫기 가능
+		//gfn_closePopup(samplePopupObj);
+	
+	} else if ( action == "OK" ) {
+		console.log(data);
+	}
+};
+
+
+
+
+
+</script>
+</html>
